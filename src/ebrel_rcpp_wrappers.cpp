@@ -58,6 +58,7 @@ Rcpp::List create_ebrel_class_object_R(std::vector<double> E,
   );
 }
 
+
 // [[Rcpp::export]]
 Rcpp::List run_ebrel_R(
     Rcpp::List ebrel_obj,
