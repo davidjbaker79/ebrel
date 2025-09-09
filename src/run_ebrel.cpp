@@ -37,7 +37,7 @@ namespace {
     ensure(in.U.size()   == Hsz,   "U size mismatch (expected dim_x*dim_y*n_h)");
     ensure(in.C.size()   == Hsz,   "C size mismatch (expected dim_x*dim_y*n_h)");
     ensure(in.E.size()   == Hsz,   "E size mismatch (expected dim_x*dim_y*n_h)");
-    ensure(in.O.size()   == static_cast<size_t>(in.n_s), "O size mismatch (expected n_s)"); // O = targets
+    ensure(in.O.size()   == static_cast<size_t>(in.n_s), "O size mismatch (expected n_s)");
     ensure(in.SD.size()  == Ssz,   "SD size mismatch (expected dim_x*dim_y*n_s)");
     ensure(in.SxH.size() == SxHsz, "SxH size mismatch (expected n_h*n_s)");
     ensure(in.D.size()   == static_cast<size_t>(in.n_s), "D size mismatch (expected n_s)");

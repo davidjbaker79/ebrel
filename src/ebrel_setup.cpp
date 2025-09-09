@@ -3,10 +3,9 @@
 #include <vector>
 #include <stdexcept>
 #include <cmath>
-#include <algorithm>  // std::max
+#include <algorithm>
 #include <string>
 #include <cstddef>
-
 
 // ------------------------- Local helper functions ----------------------------
 

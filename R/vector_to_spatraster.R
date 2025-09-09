@@ -25,6 +25,7 @@
 #'
 vector_to_spatraster <- function(vec, nh, dim1, dim2, extent = NULL, crs = NA) {
 
+  # dimensions
   size <- dim1 * dim2
   layers <- vector("list", nh)
 

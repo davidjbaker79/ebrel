@@ -7,6 +7,8 @@
 #include <stdexcept>
 #include <limits>
 
+//---------------------------- Main function -----------------------------------
+
 // User supplied options for running ebrel model
 struct RunEBRELOptions {
   int max_disp_thres = 50;

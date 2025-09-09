@@ -1,4 +1,4 @@
-// -------------------------------Simulated annealing----------------------------
+//------------------------------ Simulated annealing ---------------------------
 
 #include "simulated_annealing.h"
 #include "dispersal_utils.h"
@@ -12,13 +12,14 @@
 #include <algorithm>
 #include <stdexcept>
 
-/* Simulated annealing algorithm with:
-  - option for Lam et al style tuning schedule [Lam, J. and Delosme, J.M., 1988.
-    An efficient simulated annealing schedule: derivation. New Haven, CT: Yale
-    Electrical Engineering Department, 8816.]
-  - or geometric cooling schedule with a option to control rate of cooling
-*/
+//------------------------------ Main functions --------------------------------
 
+/* Simulated annealing algorithm with:
+ - option for Lam et al style tuning schedule [Lam, J. and Delosme, J.M., 1988.
+ An efficient simulated annealing schedule: derivation. New Haven, CT: Yale
+ Electrical Engineering Department, 8816.]
+ - or geometric cooling schedule with a option to control rate of cooling
+ */
 SAResult simulated_annealing(
     // --------- Input data and parameters
     std::vector<double> X0,

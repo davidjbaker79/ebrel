@@ -2,7 +2,7 @@
 % Please edit documentation in R/prepare_ebrel_r_to_cpp.R
 \name{prepare_ebrel_r_to_cpp}
 \alias{prepare_ebrel_r_to_cpp}
-\title{Create a C++-friendly object for EBREL optimization}
+\title{Create a C++ aligned object for EBREL optimisation}
 \usage{
 prepare_ebrel_r_to_cpp(E_rast, C_rast, SD_rast, D_vec, SxH_mat, O_vec)
 }

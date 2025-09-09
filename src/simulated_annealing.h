@@ -6,6 +6,8 @@
 #include <vector>
 #include <stdexcept>
 
+// ------------------------------- Main functions ------------------------------
+
 
 // For SA diagnostics
 struct SADiagnostics {

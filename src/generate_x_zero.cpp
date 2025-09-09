@@ -19,6 +19,7 @@ namespace {
     return static_cast<std::size_t>(dim_x) * static_cast<std::size_t>(dim_y);
   }
 
+  // For safety check in [0,1]
   inline bool in_unit_interval(double p) {
     return std::isfinite(p) && p >= 0.0 && p <= 1.0;
   }

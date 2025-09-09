@@ -16,12 +16,14 @@
 
 namespace {
 
+  // Clamp funciton
   static inline double clamp01(double x, double eps = 1e-15) {
     if (x < eps) return eps;
     if (x > 1.0 - eps) return 1.0 - eps;
     return x;
   }
 
+  // For chi hat calculations
   static double log_sum_exp_negE_over_T(const std::vector<double>& E, double invT) {
     if (E.empty()) return -std::numeric_limits<double>::infinity();
     double m = -std::numeric_limits<double>::infinity();

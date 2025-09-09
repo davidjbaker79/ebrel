@@ -1,3 +1,5 @@
+//----------------------- R wrappers for cpp functions -------------------------
+
 #include <Rcpp.h>
 #include "ebrel_setup.h"
 #include "generate_x_zero.h"
@@ -15,6 +17,8 @@
 #include <cmath>
 
 using namespace Rcpp;
+
+//------------------------------- Main functions -------------------------------
 
 // [[Rcpp::export]]
 Rcpp::List create_ebrel_class_object_R(std::vector<double> E,
@@ -57,7 +61,6 @@ Rcpp::List create_ebrel_class_object_R(std::vector<double> E,
     _["ns"] = n_s
   );
 }
-
 
 // [[Rcpp::export]]
 Rcpp::List run_ebrel_R(

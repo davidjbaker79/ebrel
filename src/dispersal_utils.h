@@ -6,7 +6,9 @@
 #include <vector>
 #include <cstdint>
 
-// Function to calculate G accounting for dispersal through the landscape of habitat patches
+/* Function to calculate G accounting for dispersal through the landscape of habitat patches
+ * - uses BFS approach for speed
+ */
 std::vector<double> compute_G(const std::vector<double>& X,
                  const std::vector<double>& E,
                  const std::vector<double>& SD,

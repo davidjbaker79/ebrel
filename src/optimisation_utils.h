@@ -17,7 +17,7 @@
  *
  * Distances:
  * - Multi-source BFS from all seed cells where E==1 for a given habitat.
- * - 8-connected neighbourhood with **unit-cost** steps (Chebyshev).
+ * - 8-connected neighbourhood with **unit-cost** steps (using Chebyshev).
  *
  * Weights:
  * - For each cell: w = exp(-sigma * d), where d is the integer hop distance.

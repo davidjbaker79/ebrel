@@ -21,7 +21,7 @@ namespace {
 //-------------------------- Main functions ------------------------------------
 
 
-// Update candidate solution based on W
+// Update candidate solution based on W (distance decay weighting)
 std::vector<double> update_candidate(
     const std::vector<double>& W,            // [n_h * n_cells], habitat-major
     const std::vector<double>& U,            // [n_h * n_cells], 1=unavailable

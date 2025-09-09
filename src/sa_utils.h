@@ -1,3 +1,5 @@
+//-------------------------- Simulated Annealing Utilities ---------------------
+
 #ifndef SA_UTILS_H
 #define SA_UTILS_H
 
@@ -19,6 +21,9 @@ struct InitTempResult {
   double T0;
   InitTempDiag diag;
 };
+
+//--------------------------------- Main functions -----------------------------
+
 
 /**
  * Estimate initial SA temperature T0 targeting acceptance probability chi0,

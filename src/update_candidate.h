@@ -6,7 +6,7 @@
 #include <vector>
 
 /**
- * Update candidate solution.
+ * Update candidate solution for simulated annealing
  *
  * All matrices are flattened row-major arrays of size [n_cells * n_h].
  * - W: per-(cell, habitat) weights, typically column-normalized.

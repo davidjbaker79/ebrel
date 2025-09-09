@@ -1,16 +1,16 @@
 #' Simulate Spatial Habitat and Species Distribution Data
 #'
-#' Generates synthetic habitat configurations, conversion costs, and species distributions
+#' Generates virtual habitat configurations, conversion costs, and species distributions
 #' for testing spatial conservation and species distribution models.
 #' The simulation supports scalable grid dimensions, flexible numbers of habitats and species,
 #' and realistic species dispersal distances drawn from a gamma distribution. It also supports
 #' generating a high proportion of rare (low-prevalence) species.
 #'
-#' @param dim1 Integer. Number of rows in the spatial grid. Default is 30.
-#' @param dim2 Integer. Number of columns in the spatial grid. Default is 40.
-#' @param n_h Integer. Number of distinct habitat types. Default is 4.
-#' @param n_s Integer. Number of species. Default is 10.
-#' @param disp_range Numeric vector of length 2. Minimum and maximum allowable dispersal distances for species. Default is \code{c(1, 10)}.
+#' @param dim1 Integer. Number of rows in the spatial grid.
+#' @param dim2 Integer. Number of columns in the spatial grid.
+#' @param n_h Integer. Number of distinct habitat types.
+#' @param n_s Integer. Number of species.
+#' @param disp_max Integer. maximum allowable dispersal distances for species.
 #' @param disp_longtail Numeric (0–1). Controls the proportion of long-distance dispersers. Low values generate mostly short dispersers; high values generate more long-tailed (dispersive) species. Default is 0.5.
 #' @param rarity_bias Numeric (≥0). Controls how many species are rare (low-prevalence). Set to 0 for equal prevalence across species; higher values (e.g. 1–3) produce more rare species. Default is 1.
 #' @param seed Integer. Random seed for reproducibility. Default is 1.
@@ -45,11 +45,11 @@
 #'
 #' @export
 simulate_ebrel_spatial_data <- function(
-    dim1 = 10,
-    dim2 = 10,
-    n_h = 4,
-    n_s = 2,
-    disp_max = 10,
+    dim1,
+    dim2,
+    n_h,
+    n_s,
+    disp_max,
     disp_longtail = 0.5,
     rarity_bias = 1,
     fixed_O = NULL) {

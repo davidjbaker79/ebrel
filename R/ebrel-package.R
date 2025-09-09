@@ -3,8 +3,7 @@
 #' @importFrom Rcpp evalCpp
 "_PACKAGE"
 
-# Add here any cpp wrapper functions that are to be exposed in R. (I want to
-# keep this minimal).
+# Add here any cpp wrapper functions that are to be exposed in R (keep this minimal).
 
 #' Create an ebrel data object
 #'

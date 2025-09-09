@@ -8,8 +8,10 @@
 //-------------------- Local helper functions ----------------------------------
 namespace {
 
+  // For storing coordinates
   struct Cell { int row, col; };
 
+  // For checking within the model boundary
   inline bool in_bounds(int r, int c, int dim_y, int dim_x) {
     return r >= 0 && c >= 0 && r < dim_y && c < dim_x;
   }

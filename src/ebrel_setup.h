@@ -1,7 +1,7 @@
 //--------------------------- Ebrel setup functions ----------------------------
 
-// These functions are for creating an ebrel object with validation. The ebrel
-// object is then suppled to the run_ebrel function.
+// These functions are for creating an Ebrel object with validation. The Ebrel
+// object is then supplied to the run_ebrel function.
 
 // Memory layout note for reference:
 // - Habitat-major 3D fields (E, C): idx = h * (dim_x*dim_y) + cell

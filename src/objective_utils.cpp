@@ -9,7 +9,7 @@
 #include <cmath>
 #include <cstddef>
 
-// ------------------------- Local helper functions ----------------------------
+//-------------------------- Local helper functions ----------------------------
 namespace {
 
   // Get number of cells
@@ -17,10 +17,12 @@ namespace {
     return static_cast<std::size_t>(dim_x) * static_cast<std::size_t>(dim_y);
   }
 
+  // For Euclidean distance
   inline int row_of(std::size_t tile, int dim_x) {
     return static_cast<int>(tile / static_cast<std::size_t>(dim_x));
   }
 
+  // For Euclidean distance
   inline int col_of(std::size_t tile, int dim_x) {
     return static_cast<int>(tile % static_cast<std::size_t>(dim_x));
   }

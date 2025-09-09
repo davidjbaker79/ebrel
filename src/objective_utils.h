@@ -1,9 +1,13 @@
+//------------------------ Objective function utilities ------------------------
+
 #ifndef OBJECTIVE_UTILS_H
 #define OBJECTIVE_UTILS_H
 
 #include <vector>
 #include <cmath>
 #include "dispersal_utils.h"  // compute_G
+
+//-------------------------- Main Functions ------------------------------------
 
 // Return structure for H(x)
 struct HResult {

@@ -1,4 +1,4 @@
-#' Create a C++-friendly object for EBREL optimization
+#' Create a C++ aligned object for EBREL optimisation
 #'
 #' Prepares raster and matrix data as flattened vectors suitable for passing to C++.
 #' This function extracts and flattens relevant input rasters and matrices into a list
