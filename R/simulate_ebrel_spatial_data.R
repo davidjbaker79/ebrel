@@ -62,7 +62,7 @@ simulate_ebrel_spatial_data <- function(
   long_disp_scale <- gamma_params$scale
 
   # --- Generate an autocorrelated response variable
-  hab_rast <- .generate_habitats_rast(
+  hab_rast <- .generate_habitat_rast(
     dim1 = dim1,
     dim2 = dim2,
     n_h = n_h,
@@ -225,7 +225,7 @@ simulate_ebrel_spatial_data <- function(
 #' @importFrom gstat vgm gstat
 #' @importFrom terra rast values app setValues which.max ifel global minmax ncell names
 #' @export
-generate_habitats_rast <- function(dim1 = 50, dim2 = 50, n_h = 4,
+.generate_habitat_rast <- function(dim1 = 50, dim2 = 50, n_h = 4,
                                    unavail_hab_prop = 0.25) {
 
   # --- Create autocorrelated surface
@@ -235,13 +235,13 @@ generate_habitats_rast <- function(dim1 = 50, dim2 = 50, n_h = 4,
                 beta = 0, model = varioMod, nmax = 50)
 
   # -- Simulate surface for "urban"
-  urban_sim <- predict(zDummy, newdata = xy, nsim = 1)
+  urban_sim <- predict(zDummy, newdata = xy, nsim = 1, debug.level = 0)
   urban <- .rescale01(rast(urban_sim, type = "xyz"))
   urban_q <- quantile(values(urban), prob = unavail_hab_prop)
   urban_binary <- ifel(urban < urban_q, 1, 0)
 
   # -- Simulate surfaces for "habitat"
-  habitat_sim <- predict(zDummy, newdata = xy, nsim = n_h)
+  habitat_sim <- predict(zDummy, newdata = xy, nsim = n_h, debug.level = 0)
   habitat <- rast(habitat_sim, type = "xyz")
   for (x in seq_len(n_h)) {
     habitat[[x]] <- .rescale01(habitat[[x]])
@@ -266,7 +266,7 @@ generate_habitats_rast <- function(dim1 = 50, dim2 = 50, n_h = 4,
   while (layers_zero == 0) {
 
     # Simulate converted land (e.g. agriculture)
-    convert_sim <- predict(zDummy, newdata = xy, nsim = 1)
+    convert_sim <- predict(zDummy, newdata = xy, nsim = 1, debug.level = 0)
     convert <- (.rescale01(rast(convert_sim, type = "xyz"))^3) * 0.5
 
     # Convert to binary (presence/absence) and mask out of E
@@ -336,7 +336,7 @@ generate_habitats_rast <- function(dim1 = 50, dim2 = 50, n_h = 4,
   visited <- ifel(occ_seed_rast > 0, 1, 0)
 
   repeat {
-    expanded <- buffer_cells(visited, width = width)
+    expanded <- .buffer_cells(visited, width = width)
 
     # candidate cells reachable in one hop AND suitable
     candidates <- ifel((expanded == 1) & (hs == 1), 1, 0)
@@ -503,7 +503,7 @@ generate_habitats_rast <- function(dim1 = 50, dim2 = 50, n_h = 4,
 #' @importFrom terra values
 #' @keywords internal
 #' @noRd
-safe_sample_cells <- function(mask_rast, size) {
+.safe_sample_cells <- function(mask_rast, size) {
   v <- terra::values(mask_rast)
   idx <- which(is.finite(v) & v > 0)
   if (length(idx) == 0L) return(integer(0))
