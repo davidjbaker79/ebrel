@@ -6,29 +6,32 @@
 #' and realistic species dispersal distances drawn from a gamma distribution. It also supports
 #' generating a high proportion of rare (low-prevalence) species.
 #'
-#' @param dim1 Integer. Number of rows in the spatial grid.
-#' @param dim2 Integer. Number of columns in the spatial grid.
+#' @param dim_x Integer. Number of rows along x/easting/longitude in the spatial grid.
+#' @param dim_y Integer. Number of columns along y/northing/latitude in the spatial grid.
 #' @param n_h Integer. Number of distinct habitat types.
 #' @param n_s Integer. Number of species.
 #' @param disp_max Integer. maximum allowable dispersal distances for species.
 #' @param disp_longtail Numeric (0–1). Controls the proportion of long-distance dispersers. Low values generate mostly short dispersers; high values generate more long-tailed (dispersive) species. Default is 0.5.
 #' @param rarity_bias Numeric (≥0). Controls how many species are rare (low-prevalence). Set to 0 for equal prevalence across species; higher values (e.g. 1–3) produce more rare species. Default is 1.
-#' @param seed Integer. Random seed for reproducibility. Default is 1.
+#' @param fixed_O Optinal numeric (>0): If set, applies the same **occupancy target** (proportional increase in occupancy) to all species; else randomised.
+#' @param convert_to_cpp_format logical: convert of c++ format or else return data in R formats.
+#' @param seed Optional integer. If provided, results are reproducible; Default NULL.
 #'
 #' @import terra
 #' @import gstat
 #'
 #' @return A list containing:
 #' \describe{
-#'   \item{\code{dim}}{Vector of grid dimensions \code{(dim1, dim2)}.}
+#'   \item{\code{dim_x}}{Numeric \code{(dim_x)}.}
+#'   \item{\code{dim_y}}{Numeric \code{(dim_y)}.}
 #'   \item{\code{n_h}}{Number of habitats.}
 #'   \item{\code{n_s}}{Number of species.}
-#'   \item{\code{E}}{3D array \code{[dim1, dim2, n_h]} of binary habitat layers.}
-#'   \item{\code{C}}{3D array \code{[dim1, dim2, n_h]} of habitat conversion costs.}
-#'   \item{\code{U}}{3D array \code{[dim1, dim2, n_h]} indicating unavailable cells (1 = unavailable).}
-#'   \item{\code{Y}}{3D array \code{[dim1, dim2, n_h]} of habitat configurations after accounting for availability.}
-#'   \item{\code{SD}}{3D array \code{[dim1, dim2, n_s]} of binary species presence/absence values.}
-#'   \item{\code{pd}}{3D array \code{[dim1, dim2, n_s]} of species occurrence probabilities.}
+#'   \item{\code{E}}{3D array \code{[dim_x, dim_y, n_h]} of binary habitat layers.}
+#'   \item{\code{C}}{3D array \code{[dim_x, dim_y, n_h]} of habitat conversion costs.}
+#'   \item{\code{U}}{3D array \code{[dim_x, dim_y, n_h]} indicating unavailable cells (1 = unavailable).}
+#'   \item{\code{Y}}{3D array \code{[dim_x, dim_y, n_h]} of habitat configurations after accounting for availability.}
+#'   \item{\code{SD}}{3D array \code{[dim_x, dim_y, n_s]} of binary species presence/absence values.}
+#'   \item{\code{pd}}{3D array \code{[dim_x, dim_y, n_s]} of species occurrence probabilities.}
 #'   \item{\code{S}}{Matrix \code{[n_h, n_s]} indicating which species use which habitats.}
 #'   \item{\code{Disp}}{Numeric vector of species dispersal distances.}
 #'   \item{\code{O}}{Numeric vector of species occupancy targets.}
@@ -38,24 +41,30 @@
 #' }
 #'
 #' @examples
-#' sim <- simulate_ebrel_spatial_data(dim1 = 50, dim2 = 50, n_h = 3, n_s = 15, rarity_bias = 2)
+#' sim <- simulate_ebrel_spatial_data(dim_x = 50, dim_y = 50, n_h = 3, n_s = 15, rarity_bias = 2)
 #' hist(sim$Disp)  # Dispersal distances
 #' image(sim$E[,,1])  # Plot first habitat layer
 #' mean(colSums(sim$SD, dims = 2)) / (50 * 50)  # Average prevalence per species
 #'
 #' @export
 simulate_ebrel_spatial_data <- function(
-    dim1,
-    dim2,
+    dim_x,
+    dim_y,
     n_h,
     n_s,
     disp_max,
     disp_longtail = 0.5,
     rarity_bias = 1,
-    fixed_O = NULL) {
+    fixed_O = NULL,
+    convert_to_cpp_format = TRUE,
+    seed = NULL) {
+  # --- Set seed for reproducibility
+  if (!is.null(seed)) {
+    set.seed(as.integer(seed))
+  }
 
   # --- Number of cells
-  n_cells <- dim1 * dim2
+  n_cells <- dim_x * dim_y
 
   gamma_params <- .map_longtail_to_gamma(disp_longtail)
   long_disp_shape <- gamma_params$shape
@@ -63,8 +72,8 @@ simulate_ebrel_spatial_data <- function(
 
   # --- Generate an autocorrelated response variable
   hab_rast <- .generate_habitat_rast(
-    dim1 = dim1,
-    dim2 = dim2,
+    dim_x = dim_x,
+    dim_y = dim_y,
     n_h = n_h,
     unavail_hab_prop = 0.25
   )
@@ -73,7 +82,7 @@ simulate_ebrel_spatial_data <- function(
   rarity_weights <- sort(rbeta(n_s, shape1 = 1, shape2 = 3 * rarity_bias + 0.1), decreasing = TRUE)
 
   # --- Simulated species probability distributions (pd)
-  pd <- array(0, dim = c(dim1, dim2, n_s))
+  pd <- array(0, dim = c(dim_x, dim_y, n_s))
 
   # ---  Habitat association matrix
   SxH <- matrix(0, nrow = n_s, ncol = n_h)
@@ -87,6 +96,7 @@ simulate_ebrel_spatial_data <- function(
   # --- Binary SD array
   SD_rast <- vector("list", n_s)
 
+  # - Try to create species in landscape
   for (s in 1:n_s) {
     npres <- 0
     tries <- 0L
@@ -97,11 +107,15 @@ simulate_ebrel_spatial_data <- function(
 
     repeat {
       tries <- tries + 1
-      if (tries > 200L) stop("simulate_ebrel_spatial_data(): failed to place species ", s,
-                             " after 200 attempts (no eligible habitat cells).")
+      if (tries > 200L) {
+        stop(
+          "simulate_ebrel_spatial_data(): failed to place species ", s,
+          " after 200 attempts (no eligible habitat cells)."
+        )
+      }
 
       # draw how many habitats and which ones
-      k  <- sample.int(k_max, 1, prob = hab_probs)
+      k <- sample.int(k_max, 1, prob = hab_probs)
       hs <- sample.int(n_h, k, replace = FALSE)
 
       # cells with any of the chosen habitats
@@ -109,7 +123,7 @@ simulate_ebrel_spatial_data <- function(
       # sample seed cells ONLY from >0
       ssize <- sample.int(5L, 1)
       cells <- .safe_sample_cells(hs_max, ssize)
-      if (length(cells) == 0L) next  # try new hs
+      if (length(cells) == 0L) next # try new hs
 
       # seed raster
       occ_seed_rast <- terra::setValues(hs_max, 0)
@@ -142,14 +156,16 @@ simulate_ebrel_spatial_data <- function(
   # --- Sigma for weights
   sigma <- 1 / mean(D)
 
-  # Set base costs for land management type per pixel
+  # --- Costs
+
+  # - Set base costs for land management type per pixel
   hab_base_cost <- .approx_doubling(n_h, include_zero = FALSE, round_digits = 0)
 
-  # Set landscape ramp to scale base costs by geographic area
-  x_ramp_vec <- seq(0.1, 1, length.out = dim2)
-  geo_C_ramp <- setValues(hab_rast$HO[[1]], rep(x_ramp_vec, dim1))
+  # - Set landscape ramp to scale base costs by geographic area
+  x_ramp_vec <- seq(0.1, 1, length.out = dim_y)
+  geo_C_ramp <- setValues(hab_rast$HO[[1]], rep(x_ramp_vec, dim_x))
 
-  # Assign costs
+  # - Assign costs
   C_rast <- lapply(seq_len(n_h), function(i) {
     C_i <- hab_rast$HO[[i]] # Get opportunity
     BC_i <- hab_base_cost[[i]] # Get base cost
@@ -161,14 +177,15 @@ simulate_ebrel_spatial_data <- function(
   C_rast <- do.call(c, C_rast)
   names(C_rast) <- paste("C", 1:n_h)
 
-  # Sort out NAs
+  # --- Sort out NAs
   E_rast <- ifel(is.na(hab_rast$E), 0, hab_rast$E)
   SD_rast <- ifel(is.na(SD_rast), 0, SD_rast)
   C_rast <- ifel(is.na(C_rast), 1e10, C_rast)
 
-  # Return
-  list(
-    dim = c(dim1, dim2),
+  # --- Simulated data in R formats
+  sim_r <- list(
+    dim_x = dim_x,
+    dim_y = dim_y,
     n_h = n_h,
     n_s = n_s,
     E = E_rast,
@@ -179,6 +196,38 @@ simulate_ebrel_spatial_data <- function(
     O = O,
     sigma = sigma
   )
+
+  # --- Return
+  if (convert_to_cpp_format) {
+    # Convert R data formats to cpp vector formats required for ebrel c++
+    sim_cpp <-
+      prepare_ebrel_r_to_cpp(
+        E_rast = E_rast,
+        C_rast = C_rast,
+        SD_rast = SD_rast,
+        D_vec = D,
+        SxH_mat = SxH,
+        O_vec = O,
+        sigma = sigma
+      )
+    return(sim_cpp)
+  } else {
+    # Return in R formats, but will require running 'prepare_ebrel_r_to_cpp()' later
+    sim_r <- list(
+      dim_x = dim_x,
+      dim_y = dim_y,
+      n_h = n_h,
+      n_s = n_s,
+      E = E_rast,
+      C = C_rast,
+      SD = SD_rast,
+      SxH = SxH,
+      D = D,
+      O = O,
+      sigma = sigma
+    )
+    return(sim_r)
+  }
 }
 
 #' Generate autocorrelated habitat rasters with availability mask
@@ -195,8 +244,8 @@ simulate_ebrel_spatial_data <- function(
 #' conversion mask; the function retries that conversion until every habitat
 #' layer in \code{E} has at least one positive cell.
 #'
-#' @param dim1 Integer. Number of rows in the grid. Default \code{50}.
-#' @param dim2 Integer. Number of columns in the grid. Default \code{50}.
+#' @param dim_x Integer. Number of rows in the grid. Default \code{50}.
+#' @param dim_y Integer. Number of columns in the grid. Default \code{50}.
 #' @param n_h Integer. Number of habitat layers to simulate. Default \code{4}.
 #' @param unavail_hab_prop Numeric in \eqn{[0,1)}. Proportion of cells treated as
 #'   unavailable (e.g., urban) and masked out of \code{HP}/\code{E}/\code{HO}.
@@ -217,7 +266,7 @@ simulate_ebrel_spatial_data <- function(
 #' @examples
 #' \dontrun{
 #' set.seed(1)
-#' sim <- generate_habitats_rast(dim1 = 30, dim2 = 40, n_h = 3, unavail_hab_prop = 0.2)
+#' sim <- generate_habitats_rast(dim_x = 30, dim_y = 40, n_h = 3, unavail_hab_prop = 0.2)
 #' sim$HP; sim$E; sim$HO
 #' terra::global(sim$E, "sum", na.rm = TRUE)  # cells per habitat
 #' }
@@ -225,14 +274,14 @@ simulate_ebrel_spatial_data <- function(
 #' @importFrom gstat vgm gstat
 #' @importFrom terra rast values app setValues which.max ifel global minmax ncell names
 #' @export
-.generate_habitat_rast <- function(dim1 = 50, dim2 = 50, n_h = 4,
+.generate_habitat_rast <- function(dim_x = 50, dim_y = 50, n_h = 4,
                                    unavail_hab_prop = 0.25) {
 
   # --- Create autocorrelated surface
-  xy <- expand.grid(x = 1:dim1, y = 1:dim2)
+  xy <- expand.grid(x = 1:dim_x, y = 1:dim_y)
   varioMod <- vgm(psill = 1, range = 40, model = 'Exp', nugget = 0.0)
   zDummy <- gstat(formula = z ~ 1, locations = ~x + y, dummy = TRUE,
-                beta = 0, model = varioMod, nmax = 50)
+                  beta = 0, model = varioMod, nmax = 50)
 
   # -- Simulate surface for "urban"
   urban_sim <- predict(zDummy, newdata = xy, nsim = 1, debug.level = 0)
@@ -252,7 +301,7 @@ simulate_ebrel_spatial_data <- function(
   HO <- habitat
   for (h in 1:(n_h)) {
     qX <- quantile(values(HO[[h]]), prob = pmin(rnorm(1, 0.90,0.01), 0.99), na.rm = TRUE
-                   ) # areas mod to small
+    ) # areas mod to small
     HO[[h]] <- ifel(HO[[h]] < qX, 0, 1) # also mask urban
   }
 

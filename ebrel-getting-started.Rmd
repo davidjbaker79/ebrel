@@ -54,7 +54,7 @@ The arguments for `simulate_ebrel_spatial_data()` are:
 
 | Argument         | Type            | What it controls                                                                 |
 |------------------|-----------------|----------------------------------------------------------------------------------|
-| `dim1`, `dim2`   | integer         | Grid size (rows × cols). Total cells = `dim1 * dim2`.                            |
+| `dim_x`, `dim_y`   | integer         | Grid size (rows × cols). Total cells = `dim_x * dim_y`.                            |
 | `n_h`            | integer         | Number of habitat classes to simulate.                                           |
 | `n_s`            | integer         | Number of species to simulate.                                                   |
 | `disp_max`       | integer         | Upper bound on species’ dispersal (in cell units).                               |

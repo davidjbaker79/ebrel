@@ -4,7 +4,7 @@
 \alias{prepare_ebrel_r_to_cpp}
 \title{Create a C++ aligned object for EBREL optimisation}
 \usage{
-prepare_ebrel_r_to_cpp(E_rast, C_rast, SD_rast, D_vec, SxH_mat, O_vec)
+prepare_ebrel_r_to_cpp(E_rast, C_rast, SD_rast, D_vec, SxH_mat, O_vec, sigma)
 }
 \arguments{
 \item{E_rast}{A \code{SpatRaster} with \strong{n_h} layers: habitat suitability/categorical habitat per habitat option.}
@@ -19,16 +19,22 @@ Values \eqn{\ge} 1e11 indicate unavailable cells (kept as-is; interpreted downst
 \item{SxH_mat}{Numeric/integer/logical matrix of shape \strong{n_s × n_h}: species–habitat associations (ideally 0/1).}
 
 \item{O_vec}{Numeric vector of length \strong{n_s}: species/feature targets (e.g., proportional increases).}
+
+\item{sigma}{Positive numeric scalar; strength of distance decay for sampling new habitat creation
+opportunities (i.e. \eqn{w = \exp(-\sigma \cdot d)}, where \eqn{d} is the integer hop distance).}
 }
 \value{
 A list with flattened numeric or integer vectors:
 \describe{
+\item{dim_x}{Number of columns (x/easting).}
+\item{dim_y}{Number of rows (y/northing).}
 \item{E}{length \code{n_cells * n_h}}
 \item{C}{length \code{n_cells * n_h}}
 \item{SD}{length \code{n_cells * n_s}}
 \item{D}{length \code{n_s}}
 \item{SxH}{length \code{n_s * n_h}}
 \item{O}{length \code{n_s}}
+\item{sigma}{The validated \code{sigma} value (numeric scalar).}
 }
 }
 \description{
@@ -44,6 +50,6 @@ rasters and \code{n_cells * n_s} for species rasters.
 }
 \examples{
 \dontrun{
-obj <- prepare_ebrel_r_to_cpp(E_rast, C_rast, SD_rast, D_vec, SxH_mat, O_vec)
+obj <- prepare_ebrel_r_to_cpp(E_rast, C_rast, SD_rast, D_vec, SxH_mat, O_vec, sigma = 0.05)
 }
 }

@@ -5,20 +5,22 @@
 \title{Simulate Spatial Habitat and Species Distribution Data}
 \usage{
 simulate_ebrel_spatial_data(
-  dim1,
-  dim2,
+  dim_x,
+  dim_y,
   n_h,
   n_s,
   disp_max,
   disp_longtail = 0.5,
   rarity_bias = 1,
-  fixed_O = NULL
+  fixed_O = NULL,
+  convert_to_cpp_format = TRUE,
+  seed = NULL
 )
 }
 \arguments{
-\item{dim1}{Integer. Number of rows in the spatial grid.}
+\item{dim_x}{Integer. Number of rows along x/easting/longitude in the spatial grid.}
 
-\item{dim2}{Integer. Number of columns in the spatial grid.}
+\item{dim_y}{Integer. Number of columns along y/northing/latitude in the spatial grid.}
 
 \item{n_h}{Integer. Number of distinct habitat types.}
 
@@ -30,20 +32,25 @@ simulate_ebrel_spatial_data(
 
 \item{rarity_bias}{Numeric (≥0). Controls how many species are rare (low-prevalence). Set to 0 for equal prevalence across species; higher values (e.g. 1–3) produce more rare species. Default is 1.}
 
-\item{seed}{Integer. Random seed for reproducibility. Default is 1.}
+\item{fixed_O}{Optinal numeric (>0): If set, applies the same \strong{occupancy target} (proportional increase in occupancy) to all species; else randomised.}
+
+\item{convert_to_cpp_format}{logical: convert of c++ format or else return data in R formats.}
+
+\item{seed}{Optional integer. If provided, results are reproducible; Default NULL.}
 }
 \value{
 A list containing:
 \describe{
-\item{\code{dim}}{Vector of grid dimensions \code{(dim1, dim2)}.}
+\item{\code{dim_x}}{Numeric \code{(dim_x)}.}
+\item{\code{dim_y}}{Numeric \code{(dim_y)}.}
 \item{\code{n_h}}{Number of habitats.}
 \item{\code{n_s}}{Number of species.}
-\item{\code{E}}{3D array \code{[dim1, dim2, n_h]} of binary habitat layers.}
-\item{\code{C}}{3D array \code{[dim1, dim2, n_h]} of habitat conversion costs.}
-\item{\code{U}}{3D array \code{[dim1, dim2, n_h]} indicating unavailable cells (1 = unavailable).}
-\item{\code{Y}}{3D array \code{[dim1, dim2, n_h]} of habitat configurations after accounting for availability.}
-\item{\code{SD}}{3D array \code{[dim1, dim2, n_s]} of binary species presence/absence values.}
-\item{\code{pd}}{3D array \code{[dim1, dim2, n_s]} of species occurrence probabilities.}
+\item{\code{E}}{3D array \code{[dim_x, dim_y, n_h]} of binary habitat layers.}
+\item{\code{C}}{3D array \code{[dim_x, dim_y, n_h]} of habitat conversion costs.}
+\item{\code{U}}{3D array \code{[dim_x, dim_y, n_h]} indicating unavailable cells (1 = unavailable).}
+\item{\code{Y}}{3D array \code{[dim_x, dim_y, n_h]} of habitat configurations after accounting for availability.}
+\item{\code{SD}}{3D array \code{[dim_x, dim_y, n_s]} of binary species presence/absence values.}
+\item{\code{pd}}{3D array \code{[dim_x, dim_y, n_s]} of species occurrence probabilities.}
 \item{\code{S}}{Matrix \code{[n_h, n_s]} indicating which species use which habitats.}
 \item{\code{Disp}}{Numeric vector of species dispersal distances.}
 \item{\code{O}}{Numeric vector of species occupancy targets.}
@@ -60,7 +67,7 @@ and realistic species dispersal distances drawn from a gamma distribution. It al
 generating a high proportion of rare (low-prevalence) species.
 }
 \examples{
-sim <- simulate_ebrel_spatial_data(dim1 = 50, dim2 = 50, n_h = 3, n_s = 15, rarity_bias = 2)
+sim <- simulate_ebrel_spatial_data(dim_x = 50, dim_y = 50, n_h = 3, n_s = 15, rarity_bias = 2)
 hist(sim$Disp)  # Dispersal distances
 image(sim$E[,,1])  # Plot first habitat layer
 mean(colSums(sim$SD, dims = 2)) / (50 * 50)  # Average prevalence per species
