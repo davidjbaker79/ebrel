@@ -73,6 +73,7 @@ inline void create_ebrel_class_object(const std::vector<double>& E,
                                       int n_h,
                                       int n_s,
                                       double sentinel,
+                                      double sigma,
                                       std::vector<double>& U_out) {
   validate_dimensions(E, C, SD, D, SxH, O, dim_x, dim_y, n_h, n_s);
   validate_existing_habitat(E, dim_x, dim_y, n_h);

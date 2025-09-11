@@ -31,7 +31,8 @@ Rcpp::List create_ebrel_class_object_R(std::vector<double> E,
                                        int dim_y,
                                        int n_h,
                                        int n_s,
-                                       double sentinel = 1e10) {
+                                       double sentinel = 1e10,
+                                       double sigma = 0.15) {
   // Convert Rcpp inputs to STL vectors
   std::vector<double> E_v(E.begin(), E.end());
   std::vector<double> C_v(C.begin(), C.end());
@@ -44,7 +45,7 @@ Rcpp::List create_ebrel_class_object_R(std::vector<double> E,
 
   // Call core C++ function
   create_ebrel_class_object(E_v, C_v, SD_v, D_v, SxH_v, O_v,
-                            dim_x, dim_y, n_h, n_s, sentinel, U_v);
+                            dim_x, dim_y, n_h, n_s, sentinel, sigma, U_v);
 
   // Return as R list
   return List::create(
@@ -58,7 +59,8 @@ Rcpp::List create_ebrel_class_object_R(std::vector<double> E,
     _["dim1"] = dim_x,
     _["dim2"] = dim_y,
     _["nh"] = n_h,
-    _["ns"] = n_s
+    _["ns"] = n_s,
+    _["sigma"] = sigma
   );
 }
 

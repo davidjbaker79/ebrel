@@ -213,6 +213,7 @@ ebrel_object_cpp <- create_ebrel_class_object_R(
   dim_y  = ebrel_cpp_in$dim_y,
   n_h    = n_h,
   n_s    = n_s,
+  sigma  = ebrel_cpp_in$sigma,
   sentinel = 1e10   # cells with C >= sentinel are unavailable
 )
 
@@ -278,7 +279,7 @@ n_iterations     <- 10000 # Low number for quick example
 acceptance_window<- max(50L, round(n_iterations / 200))
 
 # Distance weighting
-sigma <- 0.15      # more local proposals; try 0.05–0.10 if species disperse far
+sigma <- ebrel_object_cpp$sigma  # more local proposals; try 0.05–0.10 if species disperse far
 
 # Adaptive schedule (Lam–Delosme)
 lam_enabled      <- TRUE
@@ -353,7 +354,7 @@ search “warm” enough to explore at the start and gradually cools to refine s
 
 ```{r}
 
-# Test runtime scaling
+# Run toy example
 sa_res <- run_ebrel_R(
   ebrel_obj = ebrel_object_cpp,
   X0 = NULL,

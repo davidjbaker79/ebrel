@@ -11,8 +11,8 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // create_ebrel_class_object_R
-Rcpp::List create_ebrel_class_object_R(std::vector<double> E, std::vector<double> C, std::vector<double> SD, std::vector<int> D, std::vector<double> SxH, std::vector<double> O, int dim_x, int dim_y, int n_h, int n_s, double sentinel);
-RcppExport SEXP _ebrel_create_ebrel_class_object_R(SEXP ESEXP, SEXP CSEXP, SEXP SDSEXP, SEXP DSEXP, SEXP SxHSEXP, SEXP OSEXP, SEXP dim_xSEXP, SEXP dim_ySEXP, SEXP n_hSEXP, SEXP n_sSEXP, SEXP sentinelSEXP) {
+Rcpp::List create_ebrel_class_object_R(std::vector<double> E, std::vector<double> C, std::vector<double> SD, std::vector<int> D, std::vector<double> SxH, std::vector<double> O, int dim_x, int dim_y, int n_h, int n_s, double sentinel, double sigma);
+RcppExport SEXP _ebrel_create_ebrel_class_object_R(SEXP ESEXP, SEXP CSEXP, SEXP SDSEXP, SEXP DSEXP, SEXP SxHSEXP, SEXP OSEXP, SEXP dim_xSEXP, SEXP dim_ySEXP, SEXP n_hSEXP, SEXP n_sSEXP, SEXP sentinelSEXP, SEXP sigmaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -27,7 +27,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type n_h(n_hSEXP);
     Rcpp::traits::input_parameter< int >::type n_s(n_sSEXP);
     Rcpp::traits::input_parameter< double >::type sentinel(sentinelSEXP);
-    rcpp_result_gen = Rcpp::wrap(create_ebrel_class_object_R(E, C, SD, D, SxH, O, dim_x, dim_y, n_h, n_s, sentinel));
+    Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
+    rcpp_result_gen = Rcpp::wrap(create_ebrel_class_object_R(E, C, SD, D, SxH, O, dim_x, dim_y, n_h, n_s, sentinel, sigma));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -115,7 +116,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_ebrel_create_ebrel_class_object_R", (DL_FUNC) &_ebrel_create_ebrel_class_object_R, 11},
+    {"_ebrel_create_ebrel_class_object_R", (DL_FUNC) &_ebrel_create_ebrel_class_object_R, 12},
     {"_ebrel_run_ebrel_R", (DL_FUNC) &_ebrel_run_ebrel_R, 26},
     {"_ebrel_generate_X0_A_R", (DL_FUNC) &_ebrel_generate_X0_A_R, 6},
     {"_ebrel_estimate_initial_temp_R", (DL_FUNC) &_ebrel_estimate_initial_temp_R, 20},

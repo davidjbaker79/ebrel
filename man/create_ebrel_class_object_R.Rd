@@ -15,7 +15,8 @@ create_ebrel_class_object_R(
   dim_y,
   n_h,
   n_s,
-  sentinel = 1e+10
+  sentinel = 1e+10,
+  sigma
 )
 }
 \arguments{

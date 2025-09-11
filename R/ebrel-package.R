@@ -45,8 +45,8 @@
 #' obj <- create_ebrel_class_object_R(E, C, SD, D, SxH, O, n_x, n_y, 5, 12)
 #' }
 #' @export
-create_ebrel_class_object_R <- function(E, C, SD, D, SxH, O,  dim_x, dim_y, n_h, n_s, sentinel = 1e10) {
-  .Call("_ebrel_create_ebrel_class_object_R", PACKAGE = "ebrel", E, C, SD, D, SxH, O, dim_x, dim_y, n_h, n_s, sentinel)
+create_ebrel_class_object_R <- function(E, C, SD, D, SxH, O,  dim_x, dim_y, n_h, n_s, sentinel = 1e10, sigma) {
+  .Call("_ebrel_create_ebrel_class_object_R", PACKAGE = "ebrel", E, C, SD, D, SxH, O, dim_x, dim_y, n_h, n_s, sentinel, sigma)
 }
 
 #' Run the ebrel optimization
