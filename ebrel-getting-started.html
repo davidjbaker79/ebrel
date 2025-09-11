@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Getting started with ebrel - spatial prioritisation for nature recovery</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Getting started with <strong>ebrel</strong>
+- spatial prioritisation for nature recovery</h1>
+
+
+
+<div id="ebrel-spatial-prioritisation-for-nature-recovery" class="section level2">
+<h2>Ebrel: Spatial prioritisation for nature recovery</h2>
+<p>This package provides the necessary functions to run a spatial
+prioritisation using the Ebrel model, as described in:</p>
+<blockquote>
+<p>Unnithan Kumar, S., Baker, D. J., Maclean, I. M. D., &amp; Gaston, K.
+J. (2025). Spatial prioritisation for nature recovery with multiple
+options for habitat creation. Journal of Applied Ecology, 00, 1–13. <a href="https://doi.org/10.1111/1365-2664.70144" class="uri">https://doi.org/10.1111/1365-2664.70144</a></p>
+</blockquote>
+<p>The model is intended to help identify, given multiple candidate
+habitat types and costs, a spatial configuration of habitat creation or
+restoration that maximises biodiversity objectives subject to
+constraints, while accommodating species with different dispersal
+capacities and connectivity needs.</p>
+<p>This vignette demonstrates how to run the model using simulated
+data.</p>
+</div>
+<div id="setup" class="section level2">
+<h2>Setup</h2>
+<p>The package can in installed from <a href="https://github.com/davidjbaker79/ebrel.git" class="uri">https://github.com/davidjbaker79/ebrel.git</a>.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="co"># # Install from GitHub if needed</span></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="co"># install.packages(&quot;remotes&quot;)</span></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="co"># remotes::install_github(&quot;davidjbaker79/ebrel&quot;, build_vignettes = TRUE)</span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="co"># Load ebrel package</span></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="fu">library</span>(ebrel)</span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a><span class="co"># Load terra for plotting spatRasters</span></span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a><span class="fu">library</span>(terra)</span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a><span class="co">#&gt; terra 1.8.54</span></span></code></pre></div>
+</div>
+<div id="simulate-data" class="section level2">
+<h2>Simulate data</h2>
+<div id="what-the-simulator-does" class="section level3">
+<h3>What the simulator does</h3>
+<p><code>simulate_ebrel_spatial_data()</code> creates a
+<strong>simulated planning landscape</strong> and associated data for
+running <strong>ebrel</strong>. It draws autocorrelated habitat layers,
+marks some cells as unavailable, assigns <strong>conversion
+costs</strong> across the landscape associated with different habitat
+conversion options, and generates <strong>species distributions</strong>
+with configurable <strong>rarity</strong> and <strong>dispersal
+distances</strong>.</p>
+<p>The arguments for <code>simulate_ebrel_spatial_data()</code> are:</p>
+<table>
+<colgroup>
+<col width="15%" />
+<col width="14%" />
+<col width="70%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Argument</th>
+<th>Type</th>
+<th>What it controls</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>dim1</code>, <code>dim2</code></td>
+<td>integer</td>
+<td>Grid size (rows × cols). Total cells =
+<code>dim1 * dim2</code>.</td>
+</tr>
+<tr class="even">
+<td><code>n_h</code></td>
+<td>integer</td>
+<td>Number of habitat classes to simulate.</td>
+</tr>
+<tr class="odd">
+<td><code>n_s</code></td>
+<td>integer</td>
+<td>Number of species to simulate.</td>
+</tr>
+<tr class="even">
+<td><code>disp_max</code></td>
+<td>integer</td>
+<td>Upper bound on species’ dispersal (in cell units).</td>
+</tr>
+<tr class="odd">
+<td><code>disp_longtail</code></td>
+<td>numeric in [0,1]</td>
+<td>Dispersal shape: low = mostly short dispersers; high = more
+long-tailed species.</td>
+</tr>
+<tr class="even">
+<td><code>rarity_bias</code></td>
+<td>numeric ≥ 0</td>
+<td>Bias toward <strong>rare</strong> species. <code>0</code> ≈ equal
+prevalence; larger (e.g. 1–3) = rarer.</td>
+</tr>
+<tr class="odd">
+<td><code>fixed_O</code></td>
+<td>numeric/<code>NULL</code></td>
+<td>If set, applies the same <strong>occupancy target</strong> to all
+species; else randomised.</td>
+</tr>
+</tbody>
+</table>
+<p>Calling this function (as below for a small landscape) returns a
+named list with the core inputs required for ebrel:</p>
+<ul>
+<li><code>E</code> — <strong>Existing habitat</strong> stack
+(<code>terra::SpatRaster</code>, layers <code>E1..E_nh</code>), one-hot
+(one habitat per cell).</li>
+<li><code>C</code> — <strong>Conversion cost</strong> stack
+(<code>SpatRaster</code>, layers <code>C1..C_nh</code>), very high where
+conversion is impossible.</li>
+<li><code>SD</code> — <strong>Species presence/absence</strong> stack
+(<code>SpatRaster</code>, one layer per species).</li>
+<li><code>SxH</code> — <strong>Species × habitat</strong> association
+matrix (<code>n_s × n_h</code>, 1 = species uses habitat).</li>
+<li><code>D</code> — Vector of <strong>dispersal distances</strong>
+(integers, capped by <code>disp_max</code>).</li>
+<li><code>O</code> — Vector of <strong>occupancy targets</strong> (from
+<code>fixed_O</code> or random draws).</li>
+<li><code>sigma</code> — Scalar weight derived from mean dispersal.</li>
+<li><code>dim</code>, <code>n_h</code>, <code>n_s</code> — Metadata on
+the landscape and simulation.</li>
+</ul>
+<p>We can create a small example for test running
+<strong>ebrel</strong>:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="co"># Small (-ish) grid so that vignette isn&#39;t too slow</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>dim_x <span class="ot">&lt;-</span> dim_y <span class="ot">&lt;-</span> <span class="dv">50</span> </span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>n_h <span class="ot">&lt;-</span> <span class="dv">9</span> </span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>n_s <span class="ot">&lt;-</span> <span class="dv">9</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>disp_max <span class="ot">&lt;-</span> <span class="dv">30</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>disp_longtail <span class="ot">&lt;-</span> <span class="fl">0.5</span>    <span class="co"># ↑ → more long-distance dispersers</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>rarity_bias <span class="ot">&lt;-</span> <span class="dv">1</span>        <span class="co"># ↑ → more rare (low-prevalence) species</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>objective_targets <span class="ot">&lt;-</span> <span class="fl">0.2</span>  <span class="co"># same target applied to all species</span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="co"># Generate data</span></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>ebrel_sim_data <span class="ot">&lt;-</span> <span class="fu">simulate_ebrel_spatial_data</span>(</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>  <span class="at">dim_x =</span> dim_x,</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>  <span class="at">dim_y =</span> dim_y,</span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>  <span class="at">n_h =</span> n_h,</span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>  <span class="at">n_s =</span> n_s,</span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>  <span class="at">disp_max =</span> disp_max,</span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a>  <span class="at">disp_longtail =</span> disp_longtail,</span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a>  <span class="at">rarity_bias =</span> rarity_bias,</span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a>  <span class="at">fixed_O =</span> objective_targets,</span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a>  <span class="at">convert_to_cpp_format =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a>  <span class="at">seed =</span> <span class="dv">1234</span></span>
+<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a>)</span></code></pre></div>
+<p>By setting convert_to_cpp_format to FALSE,
+‘simulate_ebrel_spatial_data()’ returns a list of data in R data formats
+(e.g., spatRasters, matrices); these cannot be directly supplied to the
+ebrel model but are useful here for visualising easily the simulated
+spatial data.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co"># Plot existing habitat layers</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="fu">plot</span>(ebrel_sim_data<span class="sc">$</span>E[[<span class="dv">1</span><span class="sc">:</span><span class="dv">9</span>]])</span></code></pre></div>
+<p><img role="img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASAAAAEgCAMAAAAjXV6yAAAAz1BMVEUAAAAAADoAAGYAOjoAOmYAOpAAZrY6AAA6OgA6OmY6ZpA6ZrY6kNtEAVRmAABmOgBmOjpmOmZmOpBmZjpmZmZmZpBmZrZmkLZmkNtmtttmtv+QOgCQZjqQZmaQZpCQZraQkJCQkLaQkNuQtpCQttuQtv+Q2/+2ZgC2Zjq2Zma2ZpC2kDq2kGa2kJC2tma2tra229u22/+2///bkDrbkGbbkJDbtmbbtpDb29vb2//b/9vb///95yX/tmb/tpD/25D/27b/29v//7b//9v///8deUU2AAAACXBIWXMAAA7DAAAOwwHHb6hkAAAJaElEQVR4nO2de0PbNhTFnW6Q9TG2rpQyXnsxKN26rcAKXRxCY3//z7TYCsR2bF9J1kl803P+oHm4P1nHsqzcgE+UUq2K1r0DfRcNEkSDBNEgQTRIEA0SRIME0SBBNEgQDRJEgwTRIEE0SBANEkSDBLUZNBlGMw3OZg/Pn1yGb/uBn7wdRl+f4fjp9Yz/wRPSbtC2eXB/FGEMMvyP0X56Pgjv0AN/9u90Z2vkB7ExaLozGCINyjSODpD85NC3A1YGvfzHm9+mokHnWIPud7bbtmyRPAdlY9P/ALRpwZ8NIMgp9sCf7mDnIJhB24+PIt8jbMVP/ee4Xhg08wc/x73wg/TBoOQQcYIFugj0waBxBJih0+Iy4kXivZCTJ+ls55GTdHRwnv/jeQpY8JM/QAtFKqVBooxByfvdN5+ArSjm5wZNTz6ln08As8xcmvnGoJ9mq833wA4o5ptT7P74+9f5NB9Zy6kVxfx8w+Q2vZk1kP2/by3l1AHNfHOK7d3tJ++yIVpqIA7VgQZ+MIOQfGPQDze/p/8CO6CYbzb8/Pfp5DSFdUAzv7IhqAOK+TRIImrvAJrf1SDXVYU6fmeDSs+SP5+2lxX08YsG+Sy0yg1cHyQnzd8/qeSHHUFvz9KL1o9E+vhhDZrRLTvQtkoPwQ+2/2En6euz5NiiA5I7Xfkh9z/sZf7+5dF+2/5nfAt3OvED73+loghap9Tx243qzg+0/5WKIujDZIFvN4D8+RiDHityIIMU86sVRdcG7Fa6ivnzOej2/sSvIhfFmRYNvKu9yCjmm5LryV/P/rvwGqLlBpKjp3UdqPBtpqEu/KD7b+agX9Lb9DpEA6PadZxmvnlr8iH1rMhVh2j9QrfAj+2uY9780PsfutzR/kkg3x8oP/j+hy6YiR3IDZJN8uaH3v/VVxTtzrGNqSi6diAfPw4fVl356g1aM//x0HgZBPtqWDP/CxtBNIgGrZpPgyRi/nMdFUUl/PaKYvOCpTcVPzSfFUUbgzpU5OykmM+FogTNfiQXu7u7r7MvpcsNtHxmcupAEz+UQUj+vGD28HUZ6Agr5nMdJBFbGqg/w+J+dQDNdzYo7lkH0HyeYhLRqYHFmOpNB9D8qkHW8uyAOn7DhlH17eoLnh3Qx6dBliRYA9r5NMiSRDWIBgmiQYJokCAaJKjOoMnzdLL7evF7IONnJ5fFFyYvd89KGzhKFb/GoPuf99KLy8niV84/j8YHxRfGp5/KG7hJF79uBE2zBqa/Ll642T0rvnBzer1f3sBNqviNBhUMvh1N9osv3I6mex2OsC5+g0F3e8eLm2aN3xyfFV+oPneVKj6vYoJokCAaJIgGCaJBgmiQIBokiAYJokGCaJAgGiSIBgmiQYJokCAaJIgGCaJBgmiQIBokiAYJokGC2gwq5IuNMdEyc/74oRkQPzmKBr5fIrUbtAgegWbvXEGCWQrJL1uj8yfQbJ/ZIQYahIk1KQawdQg1sTIoOfxqCDRoujM7EX7E8TuFu8lz0NYoHQ9+wxhk+JPh8wQT4Wf4V4NX0cDXI5sRNN15MUGOoEze8VYW/Kto2/8A2Bh09eRStUHZKYaMz5pdwjKFd2hVBk2GWIMqD8NpcYQ75H9Z8JPD7RHoFMuHzkEKM2jOv0YG0c740+8wkzSV0iBRxiDF+V9ofm6Q5vwvNN8YpDj/C803p5ji/C80P99Qc/7XEr/LLeGbDNKc/4XmG4MU53+h+WZDxflfNfygt0KtbKjvD//r+CFvhbqRBoXkb65BS8Mo9uJ3Nch1VaGO39mg0jPmiwkNMF9MaID5YkIDa8j/QvPDTtJryP9C88Ne5teQ/4XmVyqK+u7W68ePrfmViqK+u/Wi+ZWKor679aL51YqiawN2K13F/PkcpDf/C803JdfV5oup4ps5SHH+F5pv3lphvpg2fuhyx8rzv9D80AWzled/ofmbW1EMxK8xyCmDcO0dQPM5giRi8THqq2FXfty32IjCU6RBKvlNBkkTUW86gOZzBEnE5Qascj570wE0f6miaPfrNdoriq4Fs6WKnDiKelPxQ/NrK4qhT7HNqih2y2Ku14bli8XmR6tLvVnIofmmoqg4/wvNnxfM9OZ/oflcKEpE7R1A82mQRNTeATSfBknEylNreXZAHb9hw6j6dvUFzw7o49MgSxKsAe18GmRJohpEgwTRIEE0SBANElRnkKr8LzS/xiBd+V9oft0IUpX/heY3GqQl/wvNbzBIT/4Xms+rmCAaJIgGCaJBgmiQIBokiAYJokGCaJAgGiSIBgmiQYJokCAaJIgGCaJBgmiQIBokiAYJokGCaJCgNoMe8rmu8l/q6xAgJPDTj0P/WAdL/rPmuwu2q92gxzANSMLVIjll+79DSPjRItjkcMvTIUuDrgADqNgBSAOP2UQz870z3uwMmu74HoA2LdKnZiMIOELP85RASLZPdg5n1iCiiYr5ZUNExOEjP88O8u2B3QhCxKOV5iBo+FF6PRy8ghqEOcMKAWkd4q0s+Jmw8VmQbKjVGoSdpDFTUOkyj8k4NPy74ewy73uI5Uk6P7wgg+b8u2+w+WJvI8xCkUppkChjkOL8LzQ/N0hz/heabwxSnP+F5ptTTHH+F5qfb1iT/7W4cUf9LTycOqA5v8ycYorzv9B8Y1BjPld1+MTODbTzAxnUh3yxilVuc4Ti/LLKhvr+8B/NdzIoXvzsTQfQfMcR5DcHITuA5rufYnGpAddVhWsH1s7vOgeVw4O88r9qF1oB+d32v2iQxUJr6RQrN6AmXyy25nc+xUrPmC8mNMB8seUGSpMc88WWGiiL+WJCA02S+PHSk7D85Sul44dVxXfrRfMrFUXMTfk3627Abg3YrXQV8+dzUM/yv2Iw32H/TclVcf4Xmm/mIMX5X5b8uPLAmm/eUpz/5cqPKx+VtOWLPRxpFN95/6sGWaZGNF4mNz5frKtBgr6EimLPOoDm99OguJ8Gwb4a1sznHCQRtXcAzadBElF7B9D8flQUkfz6kCJWFEPxvSqKzh1QzK+rKNpc6t1OgQ3LF0OFQOpdKC7nc4kWOXWA+WKSFPO5DpKI2juA5tMgiai9A2g+DZKIlafW8uyAOn7DhlH17eoLnh3Qx6dBliRYA9r5NMiSRDWIBgmiQYJokCAaJKjOIFX5X2h+jUG68r/Q/LoRpCr/C81vNEhL/hea32CQnvwvNJ9XMUE0SBANEkSDBNEgQf8Df4PgveA7gAwAAAAASUVORK5CYII=" /><!-- --></p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="co"># Plot cost layers</span></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="fu">plot</span>(ebrel_sim_data<span class="sc">$</span>C[[<span class="dv">1</span><span class="sc">:</span><span class="dv">9</span>]])</span></code></pre></div>
+<p><img role="img" src="data:image/png;base64,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" /><!-- --></p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co"># Plot species distribution layers</span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="fu">plot</span>(ebrel_sim_data<span class="sc">$</span>SD[[<span class="dv">1</span><span class="sc">:</span><span class="dv">9</span>]])</span></code></pre></div>
+<p><img role="img" src="data:image/png;base64,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" /><!-- --></p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="co"># Dispersal distances</span></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>ebrel_sim_data<span class="sc">$</span>D</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co">#&gt; [1]  6 21  9  7 13 12  4  4  7</span></span></code></pre></div>
+<p>If the simulation is run with convert_to_cpp_format = TRUE,
+‘simulate_ebrel_spatial_data()’ returns the data in the appropriate
+format for passing to the ebrel functions.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co"># # Generate data</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co"># ebrel_sim_data &lt;- simulate_ebrel_spatial_data(</span></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co">#   dim_x = dim_x,</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="co">#   dim_y = dim_y,</span></span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="co">#   n_h = n_h,</span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co">#   n_s = n_s,</span></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co">#   disp_max = disp_max,</span></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co">#   disp_longtail = disp_longtail,</span></span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="co">#   rarity_bias = rarity_bias,</span></span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a><span class="co">#   fixed_O = objective_targets,</span></span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="co">#   convert_to_cpp_format = TRUE</span></span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="co"># )</span></span></code></pre></div>
+</div>
+</div>
+<div id="running-ebrel" class="section level2">
+<h2>Running <strong>ebrel</strong></h2>
+<div id="build-the-c-aligned-inputs-from-terra-objects" class="section level3">
+<h3>1) Build the C++-aligned inputs (from <code>terra</code>
+objects)</h3>
+<p>If you created data with
+<code>simulate_ebrel_spatial_data(..., convert_to_cpp_format = FALSE)</code>
+(or have your own <code>terra</code> rasters), convert them to the
+flattened, C++-ready layout using ‘prepare_ebrel_r_to_cpp’:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>ebrel_cpp_in <span class="ot">&lt;-</span> <span class="fu">prepare_ebrel_r_to_cpp</span>(</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  <span class="at">E_rast  =</span> ebrel_sim_data<span class="sc">$</span>E,     <span class="co"># SpatRaster, n_h layers</span></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  <span class="at">C_rast  =</span> ebrel_sim_data<span class="sc">$</span>C,     <span class="co"># SpatRaster, n_h layers (sentinel = very large =&gt; unavailable)</span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>  <span class="at">SD_rast =</span> ebrel_sim_data<span class="sc">$</span>SD,    <span class="co"># SpatRaster, n_s layers</span></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>  <span class="at">D_vec   =</span> ebrel_sim_data<span class="sc">$</span>D,     <span class="co"># length n_s</span></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>  <span class="at">SxH_mat =</span> ebrel_sim_data<span class="sc">$</span>SxH,   <span class="co"># n_s x n_h</span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>  <span class="at">O_vec   =</span> ebrel_sim_data<span class="sc">$</span>O,     <span class="co"># length n_s</span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>  <span class="at">sigma   =</span> ebrel_sim_data<span class="sc">$</span>sigma  <span class="co"># positive numeric</span></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a>)</span></code></pre></div>
+<p>This function requires the following inputs:</p>
+<table>
+<colgroup>
+<col width="17%" />
+<col width="63%" />
+<col width="19%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Argument</th>
+<th>Type / Shape</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>E_rast</code></td>
+<td><code>terra::SpatRaster</code> with <strong>n_h</strong> layers</td>
+<td>Habitat stack (one layer per habitat option). Must align
+(extent/resolution/CRS/rows/cols) with <code>C_rast</code> and
+<code>SD_rast</code>.</td>
+</tr>
+<tr class="even">
+<td><code>C_rast</code></td>
+<td><code>terra::SpatRaster</code> with <strong>n_h</strong> layers</td>
+<td>Conversion cost/constraint stack. Values ≥ <code>1e11</code> are
+treated as <strong>unavailable</strong> downstream. Must align with
+<code>E_rast</code>.</td>
+</tr>
+<tr class="odd">
+<td><code>SD_rast</code></td>
+<td><code>terra::SpatRaster</code> with <strong>n_s</strong> layers</td>
+<td>Species/feature baseline distributions (one layer per
+species/feature). Must align with <code>E_rast</code>.</td>
+</tr>
+<tr class="even">
+<td><code>D_vec</code></td>
+<td>numeric vector, length <strong>n_s</strong></td>
+<td>Species/feature maximum dispersal distances (in
+<strong>cells</strong>).</td>
+</tr>
+<tr class="odd">
+<td><code>SxH_mat</code></td>
+<td>matrix <code>n_s × n_h</code> (numeric/integer/logical)</td>
+<td>Species–habitat associations (ideally 0/1; non-binary values are
+passed through with a warning).</td>
+</tr>
+<tr class="even">
+<td><code>O_vec</code></td>
+<td>numeric vector, length <strong>n_s</strong></td>
+<td>Species/feature targets (e.g., proportional increases).</td>
+</tr>
+<tr class="odd">
+<td><code>sigma</code></td>
+<td>positive numeric scalar</td>
+<td>Distance-decay strength used to weight candidate updates (used as
+<span class="math inline">\(w = \exp(-\sigma \cdot d)\)</span>, with
+<span class="math inline">\(d\)</span> the integer hop distance).</td>
+</tr>
+</tbody>
+</table>
+<p>The function infers dim_x/dim_y from the rasters, validates shapes,
+and flattens everything using layer-major order (all cells of layer 1,
+then layer 2, …).</p>
+</div>
+<div id="create-the-ebrel-object-validation-unavailable-mask" class="section level3">
+<h3>2) Create the <strong>ebrel</strong> object (validation +
+unavailable mask)</h3>
+<p>‘create_ebrel_class_object_R()’ calls the C++ setup that validates
+inputs and constructs the unavailable mask U from the cost stack C using
+a sentinel threshold (cells with costs ≥ sentinel are unavailable).</p>
+<p>The function performs the following checks and data
+transformations:</p>
+<ul>
+<li>validate_dimensions(…) ensures all vector lengths match:
+<ul>
+<li>E, C: dim_x * dim_y * n_h</li>
+<li>SD: dim_x * dim_y * n_s</li>
+<li>SxH: n_h * n_s</li>
+<li>O: n_s</li>
+</ul></li>
+<li>validate_existing_habitat(E, dim_x, dim_y, n_h) enforces one-hot
+existing habitat (≤1 habitat per cell).</li>
+<li>get_unavailable_mask(C, n_h, dim_x, dim_y, sentinel) builds U
+(binary, same shape as E/C).</li>
+</ul>
+<p>Memory layout (flattening) in C++:</p>
+<ul>
+<li>Habitat-major 3D fields (E, C, U): idx = h * (dim_x * dim_y) +
+cell</li>
+<li>Species-major 3D field (SD): idx = s * (dim_x * dim_y) + cell</li>
+<li>SxH (n_h × n_s, flattened): idx = h * n_s + s</li>
+<li>O: species-level (length = n_s)</li>
+</ul>
+<p>Create the object by calling ‘create_ebrel_class_object_R()’ as:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>ebrel_object_cpp <span class="ot">&lt;-</span> <span class="fu">create_ebrel_class_object_R</span>(</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>  <span class="at">E      =</span> ebrel_cpp_in<span class="sc">$</span>E,</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>  <span class="at">C      =</span> ebrel_cpp_in<span class="sc">$</span>C,</span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>  <span class="at">SD     =</span> ebrel_cpp_in<span class="sc">$</span>SD,</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>  <span class="at">D      =</span> ebrel_cpp_in<span class="sc">$</span>D,</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>  <span class="at">SxH    =</span> ebrel_cpp_in<span class="sc">$</span>SxH,</span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a>  <span class="at">O      =</span> ebrel_cpp_in<span class="sc">$</span>O,</span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a>  <span class="at">dim_x  =</span> ebrel_cpp_in<span class="sc">$</span>dim_x,</span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>  <span class="at">dim_y  =</span> ebrel_cpp_in<span class="sc">$</span>dim_y,</span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a>  <span class="at">n_h    =</span> n_h,</span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a>  <span class="at">n_s    =</span> n_s,</span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a>  <span class="at">sentinel =</span> <span class="fl">1e10</span>   <span class="co"># cells with C &gt;= sentinel are unavailable</span></span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="run-ebrel-optimiser" class="section level3">
+<h3>3) Run <strong>ebrel</strong> optimiser</h3>
+<p>At this stage we configure and run the <strong>simulated annealing
+(SA)</strong> optimiser. SA’s behaviour is mainly driven by (i) how
+proposals are made, (ii) the temperature schedule, and (iii) the
+early-stopping rules. The literature on these aspects of SA is vast, but
+we have selected a few customisable options to control the behaviour of
+the SA algorithm. Below is a quick guide to the key parameters and
+practical defaults.</p>
+<div id="proposal-mechanics" class="section level4">
+<h4>Proposal mechanics</h4>
+<table>
+<colgroup>
+<col width="33%" />
+<col width="33%" />
+<col width="33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Parameter</th>
+<th>What it does</th>
+<th>Typical range / tips</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>step_proportion</code></td>
+<td>Fraction of <strong>eligible cells</strong> considered per proposal.
+Larger ⇒ bigger moves per step.</td>
+<td>0.02–0.10. Start at <code>0.05</code>.</td>
+</tr>
+<tr class="even">
+<td><code>step_probability</code></td>
+<td>For a considered cell, probability of assigning <strong>any</strong>
+(non-zero) habitat.</td>
+<td>0.02–0.20. Start at <code>0.05</code>.</td>
+</tr>
+<tr class="odd">
+<td><code>sigma</code></td>
+<td>Distance-decay strength in the candidate sampler, used like <span class="math inline">\(w=\exp(-\sigma d)\)</span>. Larger ⇒ more local
+moves.</td>
+<td>&gt;0. If species disperse farther, use smaller <code>sigma</code>
+(e.g. <code>0.03–0.10</code>); for tight clustering use
+<code>0.10–0.25</code>. A useful starting point is to estimate sigma as
+1 / mean(D).</td>
+</tr>
+<tr class="even">
+<td><code>base_prob_X0</code></td>
+<td>If <code>X0=NULL</code>, controls the <strong>sparseness</strong> of
+the auto-generated seed (probability of <em>no</em> habitat).</td>
+<td>0.7–0.9 keeps starts fairly empty.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="objective-scaling-ecological-controls" class="section level4">
+<h4>Objective scaling &amp; ecological controls</h4>
+<table>
+<colgroup>
+<col width="33%" />
+<col width="33%" />
+<col width="33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Parameter</th>
+<th>What it does</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>alpha</code>, <code>beta</code>, <code>gamma</code></td>
+<td>Weights for targets, aggregation, and costs.</td>
+<td>Internally, <code>beta</code>/<code>gamma</code> are rescaled
+against the initial <code>X0</code> so magnitudes are comparable. Use
+these to change emphasis, e.g., towards a more aggregated solution.</td>
+</tr>
+<tr class="even">
+<td><code>max_disp_thres</code>, <code>disp_boundary</code></td>
+<td>Dispersal gating for species effects.</td>
+<td><code>disp_boundary</code> just sets an upper limited on the search
+area of species dispersal (e.g., if the study is considering a time
+horizon of 30 years and we assume a single dispersal event per year,
+then we might set this to ~30) ; set <code>max_disp_thres</code> based
+on the strongest dispersing species where it is judged likely they will
+be able to reach any part of the landscape by hopping large distances
+(skips the BFS search). The units for both of these controls in in grid
+cells.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="temperature-schedule" class="section level4">
+<h4>Temperature schedule</h4>
+<p>You can set the initial temperature yourself (<code>temp</code>), or
+estimate it to hit a target uphill acceptance <span class="math inline">\(\chi_0\)</span> with
+<code>estimate_initial_temp_R()</code> (Ben-Ameur).</p>
+<table>
+<colgroup>
+<col width="33%" />
+<col width="33%" />
+<col width="33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Parameter</th>
+<th>What it does</th>
+<th>Typical values</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>temp</code></td>
+<td>Initial temperature <span class="math inline">\(T_1\)</span>.</td>
+<td>Use output of <code>estimate_initial_temp_R()</code>; otherwise try
+<code>1000–5000</code> on small grids and check acceptance.</td>
+</tr>
+<tr class="even">
+<td><code>cooling_rate_c</code></td>
+<td>Harmonic/geometric cooling constant (when
+<code>lam_enabled=FALSE</code>).</td>
+<td><code>1.0</code> is a safe default. Increase to cool faster.</td>
+</tr>
+<tr class="odd">
+<td><code>lam_enabled</code></td>
+<td>Enable Lam–Delosme <strong>adaptive</strong> schedule (keeps uphill
+acceptance near a time-varying target).</td>
+<td><code>TRUE</code> recommended.</td>
+</tr>
+<tr class="even">
+<td><code>lam_target_mid</code></td>
+<td>Target uphill acceptance in early/mid run.</td>
+<td>~<code>0.3–0.6</code> (default <code>0.44</code>).</td>
+</tr>
+<tr class="odd">
+<td><code>lam_target_final</code></td>
+<td>Target uphill acceptance at the end.</td>
+<td>~<code>0.02–0.08</code>.</td>
+</tr>
+<tr class="even">
+<td><code>lam_hold_frac</code></td>
+<td>Fraction of the run to <strong>hold</strong>
+<code>lam_target_mid</code> before decaying to final.</td>
+<td><code>0.5–0.7</code> (default <code>0.60</code>).</td>
+</tr>
+<tr class="odd">
+<td><code>lam_p</code></td>
+<td>Damping exponent in the Ben-Ameur correction used by the controller.
+Higher ⇒ smoother updates.</td>
+<td><code>2</code> is a good default.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="budget-stopping" class="section level4">
+<h4>Budget &amp; stopping</h4>
+<table>
+<colgroup>
+<col width="33%" />
+<col width="33%" />
+<col width="33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Parameter</th>
+<th>What it does</th>
+<th>Practical guidance</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>n_iterations</code></td>
+<td>Max proposals (not counting no-ops).</td>
+<td>Start <code>1e4–5e4</code> (small) or much higher for large
+grids.</td>
+</tr>
+<tr class="even">
+<td><code>acceptance_window</code></td>
+<td>Window size for measuring acceptance rate and applying Lam
+updates.</td>
+<td>~<code>n_iterations/200</code> (0.5% of run). Ensure
+<code>≥ 50</code>.</td>
+</tr>
+<tr class="odd">
+<td><code>min_iterations</code></td>
+<td>Never stop before this many <strong>real</strong> proposals.</td>
+<td>~<code>10 × acceptance_window</code> (e.g. <code>2000</code>).</td>
+</tr>
+<tr class="even">
+<td><code>acceptance_thres</code></td>
+<td>“Low” acceptance threshold used in early-stop logic.</td>
+<td><code>0.005–0.02</code>.</td>
+</tr>
+<tr class="odd">
+<td><code>iter_no_improve</code></td>
+<td>Patience (proposals) without meaningful improvement before early
+stop can trigger.</td>
+<td>~<code>n_iterations/10</code> (e.g. <code>2000</code>).</td>
+</tr>
+<tr class="even">
+<td><code>improve_eps</code></td>
+<td>Relative improvement needed to reset patience.</td>
+<td><code>1e-6</code> to <code>1e-5</code>.</td>
+</tr>
+<tr class="odd">
+<td><code>seed</code>, <code>verbose</code></td>
+<td>RNG control and logging.</td>
+<td>Set <code>seed</code> for reproducibility; <code>verbose=TRUE</code>
+prints per-window stats.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="example-run" class="section level3">
+<h3>Example run</h3>
+<div id="set-parameters" class="section level4">
+<h4>- Set parameters</h4>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="co"># Proposal &amp; budget</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>step_proportion  <span class="ot">&lt;-</span> <span class="fl">0.05</span></span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>step_probability <span class="ot">&lt;-</span> <span class="fl">0.05</span></span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>n_iterations     <span class="ot">&lt;-</span> <span class="dv">10000</span> <span class="co"># Low number for quick example</span></span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>acceptance_window<span class="ot">&lt;-</span> <span class="fu">max</span>(<span class="dv">50</span><span class="dt">L</span>, <span class="fu">round</span>(n_iterations <span class="sc">/</span> <span class="dv">200</span>))</span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="co"># Distance weighting</span></span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a>sigma <span class="ot">&lt;-</span> <span class="fl">0.15</span>      <span class="co"># more local proposals; try 0.05–0.10 if species disperse far</span></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a></span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a><span class="co"># Adaptive schedule (Lam–Delosme)</span></span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a>lam_enabled      <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a>lam_p            <span class="ot">&lt;-</span> <span class="dv">2</span></span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a>lam_target_mid   <span class="ot">&lt;-</span> <span class="fl">0.44</span></span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a>lam_target_final <span class="ot">&lt;-</span> <span class="fl">0.02</span></span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a>lam_hold_frac    <span class="ot">&lt;-</span> <span class="fl">0.60</span></span>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a></span>
+<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a><span class="co"># Early stopping</span></span>
+<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a>min_iterations   <span class="ot">&lt;-</span> acceptance_window <span class="sc">*</span> <span class="dv">10</span></span>
+<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a>acceptance_thres <span class="ot">&lt;-</span> <span class="fl">0.01</span></span>
+<span id="cb10-20"><a href="#cb10-20" tabindex="-1"></a>iter_no_improve  <span class="ot">&lt;-</span> <span class="dv">2000</span></span>
+<span id="cb10-21"><a href="#cb10-21" tabindex="-1"></a>improve_eps      <span class="ot">&lt;-</span> <span class="fl">1e-6</span></span>
+<span id="cb10-22"><a href="#cb10-22" tabindex="-1"></a></span>
+<span id="cb10-23"><a href="#cb10-23" tabindex="-1"></a><span class="co"># Objective emphasis (internally re-scaled)</span></span>
+<span id="cb10-24"><a href="#cb10-24" tabindex="-1"></a>alpha <span class="ot">&lt;-</span> <span class="fl">1.0</span> <span class="co"># Emphasis on meeting targets</span></span>
+<span id="cb10-25"><a href="#cb10-25" tabindex="-1"></a>beta <span class="ot">&lt;-</span> <span class="fl">25.0</span> </span>
+<span id="cb10-26"><a href="#cb10-26" tabindex="-1"></a>gamma <span class="ot">&lt;-</span> <span class="fl">100.0</span></span>
+<span id="cb10-27"><a href="#cb10-27" tabindex="-1"></a></span>
+<span id="cb10-28"><a href="#cb10-28" tabindex="-1"></a><span class="co"># Species dispersal limits</span></span>
+<span id="cb10-29"><a href="#cb10-29" tabindex="-1"></a>max_disp_thres <span class="ot">&lt;-</span> <span class="dv">30</span> <span class="co"># The grid dims are small so assume if a species can hop 30 cells it can reach anywhere.</span></span>
+<span id="cb10-30"><a href="#cb10-30" tabindex="-1"></a>disp_boundary <span class="ot">&lt;-</span> <span class="dv">30</span> <span class="co"># Likely won&#39;t have much effect on small grid, but will speed up large problems.</span></span></code></pre></div>
+</div>
+<div id="i-choose-an-initial-sa-temperature-optional-but-recommended" class="section level4">
+<h4>i) Choose an initial SA temperature (Optional, but recommended)</h4>
+<p>Using the estimate_initial_temp_R() we can call a C++ function to
+estimate a suitable initial temperature <span class="math inline">\(T_1\)</span> that targets a desired
+<strong>uphill</strong> acceptance rate <span class="math inline">\(\chi_0\)</span> using the <strong>Ben-Ameur
+(2004)</strong> fixed-point approach.</p>
+<p>We recommend using <code>estimate_initial_temp_R()</code> to get a
+<code>temp</code> that yields your desired “warmth” at the start
+(e.g. &gt; <span class="math inline">\(\chi_0=0.8\)</span>). Then keep
+<code>lam_enabled=TRUE</code> so the controller adapts the temperature
+as the run progresses.</p>
+</div>
+<div id="using-it-in-ebrel" class="section level4">
+<h4>Using it in <strong>ebrel</strong></h4>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>T0_out <span class="ot">&lt;-</span> <span class="fu">estimate_initial_temp_R</span>(</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>  <span class="at">ebrel_obj        =</span> ebrel_object_cpp,</span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>  <span class="at">X0               =</span> <span class="cn">NULL</span>,  <span class="co"># use if you have a initial starting point for the model</span></span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a>  <span class="at">base_prob_X0     =</span> <span class="fl">0.85</span>,  <span class="co"># if X0 is NULL, ebrel generates an X0 using base_prob_X0</span></span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a>  <span class="at">max_disp_thres   =</span> max_disp_thres,</span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a>  <span class="at">disp_boundary    =</span> disp_boundary,</span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a>  <span class="at">alpha            =</span> alpha,</span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a>  <span class="at">beta             =</span> beta,</span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a>  <span class="at">gamma            =</span> gamma,</span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a>  <span class="at">step_proportion  =</span> step_proportion,</span>
+<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a>  <span class="at">step_probability =</span> step_probability,</span>
+<span id="cb11-13"><a href="#cb11-13" tabindex="-1"></a>  <span class="at">num_samples      =</span> <span class="dv">400</span>,   <span class="co"># proposals per iteration to estimate chi</span></span>
+<span id="cb11-14"><a href="#cb11-14" tabindex="-1"></a>  <span class="at">chi0             =</span> <span class="fl">0.8</span>,   <span class="co"># target uphill acceptance</span></span>
+<span id="cb11-15"><a href="#cb11-15" tabindex="-1"></a>  <span class="at">p                =</span> lam_p,   <span class="co"># damping exponent in the update</span></span>
+<span id="cb11-16"><a href="#cb11-16" tabindex="-1"></a>  <span class="at">tol_logchi       =</span> <span class="fl">1e-3</span>,  <span class="co"># stop when |log(chi_hat)-log(chi0)| &lt;= tol</span></span>
+<span id="cb11-17"><a href="#cb11-17" tabindex="-1"></a>  <span class="at">max_iters        =</span> <span class="dv">50</span>,    <span class="co"># safety cap</span></span>
+<span id="cb11-18"><a href="#cb11-18" tabindex="-1"></a>  <span class="at">sigma            =</span> sigma,</span>
+<span id="cb11-19"><a href="#cb11-19" tabindex="-1"></a>  <span class="at">seed             =</span> <span class="dv">1234</span>,</span>
+<span id="cb11-20"><a href="#cb11-20" tabindex="-1"></a>  <span class="at">verbose          =</span> <span class="cn">TRUE</span></span>
+<span id="cb11-21"><a href="#cb11-21" tabindex="-1"></a>)</span>
+<span id="cb11-22"><a href="#cb11-22" tabindex="-1"></a></span>
+<span id="cb11-23"><a href="#cb11-23" tabindex="-1"></a>T0_out<span class="sc">$</span>T0            <span class="co"># the recommended T1</span></span>
+<span id="cb11-24"><a href="#cb11-24" tabindex="-1"></a><span class="co">#&gt; [1] 27368.41</span></span>
+<span id="cb11-25"><a href="#cb11-25" tabindex="-1"></a>T0_out<span class="sc">$</span>chi_hat_final <span class="co"># achieved uphill acceptance at T1</span></span>
+<span id="cb11-26"><a href="#cb11-26" tabindex="-1"></a><span class="co">#&gt; [1] 0.7992631</span></span>
+<span id="cb11-27"><a href="#cb11-27" tabindex="-1"></a>T0_out<span class="sc">$</span>iters         <span class="co"># number of fixed-point updates performed</span></span>
+<span id="cb11-28"><a href="#cb11-28" tabindex="-1"></a><span class="co">#&gt; [1] 5</span></span></code></pre></div>
+</div>
+<div id="ii-run-the-sa-optimiser" class="section level4">
+<h4>ii) Run the SA optimiser</h4>
+<p>We now launch the optimiser. Here we enable the <strong>Lam–Delosme
+adaptive schedule</strong> (<code>lam_enabled = TRUE</code>), which uses
+the Ben-Ameur correction described above to nudge the temperature so
+that the <strong>uphill acceptance rate</strong> tracks a target curve:
+it holds around <code>lam_target_mid</code> early on, then decays toward
+<code>lam_target_final</code> after <code>lam_hold_frac</code> of the
+run has elapsed. The damping exponent <code>lam_p</code> (we use 2)
+makes these updates stable rather than jittery. Paired with the initial
+temperature <span class="math inline">\(T_1\)</span> estimated earlier,
+this keeps the search “warm” enough to explore at the start and
+gradually cools to refine solutions.</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a></span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a><span class="co"># Test runtime scaling</span></span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>sa_res <span class="ot">&lt;-</span> <span class="fu">run_ebrel_R</span>(</span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>  <span class="at">ebrel_obj =</span> ebrel_object_cpp,</span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>  <span class="at">X0 =</span> <span class="cn">NULL</span>,</span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>  <span class="at">max_disp_thres =</span> max_disp_thres,</span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a>  <span class="at">disp_boundary =</span> disp_boundary,</span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a>  <span class="at">alpha =</span> alpha,</span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a>  <span class="at">beta =</span> beta,</span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a>  <span class="at">gamma =</span> gamma,</span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a>  <span class="at">sigma =</span> sigma,</span>
+<span id="cb12-12"><a href="#cb12-12" tabindex="-1"></a>  <span class="at">base_prob_X0 =</span> <span class="fl">0.85</span>,</span>
+<span id="cb12-13"><a href="#cb12-13" tabindex="-1"></a>  <span class="at">temp =</span> T0_out<span class="sc">$</span>T0,</span>
+<span id="cb12-14"><a href="#cb12-14" tabindex="-1"></a>  <span class="at">step_proportion =</span> step_proportion,</span>
+<span id="cb12-15"><a href="#cb12-15" tabindex="-1"></a>  <span class="at">step_probability =</span> step_probability,</span>
+<span id="cb12-16"><a href="#cb12-16" tabindex="-1"></a>  <span class="at">n_iterations =</span> n_iterations,</span>
+<span id="cb12-17"><a href="#cb12-17" tabindex="-1"></a>  <span class="at">lam_enabled =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb12-18"><a href="#cb12-18" tabindex="-1"></a>  <span class="at">lam_target_mid =</span> lam_target_mid,</span>
+<span id="cb12-19"><a href="#cb12-19" tabindex="-1"></a>  <span class="at">lam_target_final =</span> lam_target_final,</span>
+<span id="cb12-20"><a href="#cb12-20" tabindex="-1"></a>  <span class="at">lam_hold_frac =</span> lam_hold_frac,</span>
+<span id="cb12-21"><a href="#cb12-21" tabindex="-1"></a>  <span class="at">lam_p =</span> lam_p,</span>
+<span id="cb12-22"><a href="#cb12-22" tabindex="-1"></a>  <span class="at">min_iterations =</span> min_iterations,</span>
+<span id="cb12-23"><a href="#cb12-23" tabindex="-1"></a>  <span class="at">acceptance_window =</span> acceptance_window,</span>
+<span id="cb12-24"><a href="#cb12-24" tabindex="-1"></a>  <span class="at">acceptance_thres =</span> acceptance_thres,</span>
+<span id="cb12-25"><a href="#cb12-25" tabindex="-1"></a>  <span class="at">iter_no_improve =</span> iter_no_improve,</span>
+<span id="cb12-26"><a href="#cb12-26" tabindex="-1"></a>  <span class="at">improve_eps =</span> improve_eps,</span>
+<span id="cb12-27"><a href="#cb12-27" tabindex="-1"></a>  <span class="at">seed =</span> <span class="dv">1234</span>,</span>
+<span id="cb12-28"><a href="#cb12-28" tabindex="-1"></a>  <span class="at">verbose =</span> <span class="cn">TRUE</span></span>
+<span id="cb12-29"><a href="#cb12-29" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+</div>
+<div id="inspecting-the-optimiser-output" class="section level3">
+<h3>Inspecting the optimiser output</h3>
+<p>After a run, it’s useful to sanity-check both the <strong>search
+dynamics</strong> and the <strong>solution</strong>:</p>
+<ul>
+<li><strong>Acceptance profile</strong>
+(<code>sa_res$acc_rate_trace</code>)<br />
+Expect higher acceptance early (warm) that declines as the run cools.
+<ul>
+<li>If it crashes to ~0 very early → start hotter (re-estimate
+<code>T0</code>), raise <code>lam_target_mid</code>, or reduce
+<code>step_proportion</code>.<br />
+</li>
+<li>If it stays very high late in the run → cool faster (lower
+<code>lam_target_final</code>, raise <code>cooling_rate_c</code>, or
+reduce <code>lam_hold_frac</code>).</li>
+</ul></li>
+<li><strong>Best allocation</strong> (<code>sa_res$X_best</code>)<br />
+Convert back to rasters and plot by habitat. Check that:
+<ul>
+<li>Feasibility is respected (no assignments where
+<code>U==1</code>).<br />
+</li>
+<li>Patterns make ecological sense (aggregation vs. spread matches your
+<code>beta</code>, <code>sigma</code>, and dispersal).<br />
+</li>
+<li>Costs concentrate where benefits are highest.</li>
+</ul></li>
+<li><strong>Target shortfalls</strong>
+(<code>sa_res$g_best</code>)<br />
+Values near 0 mean targets are met; positive values indicate unmet
+targets.
+<ul>
+<li>Inspect which species are driving the objective; consider adjusting
+<code>alpha</code> or revisiting <code>O</code>, <code>SxH</code>, or
+dispersal.</li>
+<li>It might not be possible to reach targets for some species (i.e., if
+there are few habitat opportunities available than are required). In
+this case targets might need to be lowered for these species by
+pre-computing available opportunities.</li>
+</ul></li>
+<li><strong>Trajectory diagnostics</strong> (<code>H_trace</code>,
+<code>F_trace</code>)<br />
+Plot objective vs. auxiliary trace to see if improvements in
+<code>H</code> align with improvements in <code>F</code>.
+<ul>
+<li>Use an improvements-only plot
+(e.g. <code>plot_sa_improvements</code>) to focus on steps where the
+best solution improved.</li>
+<li>When all species targets are met H(x) will equal F(x). After this
+point improvements are related to spatial configuration and costs.</li>
+</ul></li>
+</ul>
+<p>Helpful run summaries: - <code>sa_res$early_stop_iter</code> (if
+early stopping triggered) - <code>sa_res$proposals</code>,
+<code>sa_res$accepted</code>, <code>sa_res$overall_acc</code> - length
+of <code>sa_res$H_trace</code> (number of evaluated proposals)</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a></span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a><span class="co"># Inspect acceptance rate trace</span></span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>sa_res<span class="sc">$</span>acc_rate_trace</span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a><span class="co">#&gt;   [1] 0.88000000 0.86000000 0.76000000 0.64000000 0.56000000 0.74000000</span></span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a><span class="co">#&gt;   [7] 0.60000000 0.82000000 0.40816327 0.61224490 0.50000000 0.62000000</span></span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a><span class="co">#&gt;  [13] 0.54000000 0.73469388 0.68000000 0.60000000 0.68000000 0.66000000</span></span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a><span class="co">#&gt;  [19] 0.52000000 0.56000000 0.57142857 0.62000000 0.51020408 0.50000000</span></span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a><span class="co">#&gt;  [25] 0.72000000 0.56000000 0.72000000 0.57142857 0.66000000 0.48000000</span></span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a><span class="co">#&gt;  [31] 0.66000000 0.70000000 0.51020408 0.62000000 0.72000000 0.60000000</span></span>
+<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a><span class="co">#&gt;  [37] 0.55102041 0.67346939 0.63265306 0.60000000 0.63265306 0.61224490</span></span>
+<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a><span class="co">#&gt;  [43] 0.66000000 0.66000000 0.48000000 0.46938776 0.72000000 0.55102041</span></span>
+<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a><span class="co">#&gt;  [49] 0.64000000 0.54000000 0.80000000 0.60000000 0.64000000 0.55102041</span></span>
+<span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a><span class="co">#&gt;  [55] 0.59183673 0.72000000 0.69387755 0.60000000 0.69387755 0.73469388</span></span>
+<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a><span class="co">#&gt;  [61] 0.46938776 0.57142857 0.70000000 0.62000000 0.48000000 0.64000000</span></span>
+<span id="cb13-15"><a href="#cb13-15" tabindex="-1"></a><span class="co">#&gt;  [67] 0.60000000 0.54000000 0.68000000 0.58000000 0.54000000 0.67346939</span></span>
+<span id="cb13-16"><a href="#cb13-16" tabindex="-1"></a><span class="co">#&gt;  [73] 0.68000000 0.74000000 0.46000000 0.62500000 0.47916667 0.73469388</span></span>
+<span id="cb13-17"><a href="#cb13-17" tabindex="-1"></a><span class="co">#&gt;  [79] 0.65306122 0.52000000 0.70833333 0.72000000 0.54166667 0.63265306</span></span>
+<span id="cb13-18"><a href="#cb13-18" tabindex="-1"></a><span class="co">#&gt;  [85] 0.76000000 0.44000000 0.62000000 0.52000000 0.66000000 0.61224490</span></span>
+<span id="cb13-19"><a href="#cb13-19" tabindex="-1"></a><span class="co">#&gt;  [91] 0.52000000 0.50000000 0.60000000 0.67346939 0.59183673 0.66000000</span></span>
+<span id="cb13-20"><a href="#cb13-20" tabindex="-1"></a><span class="co">#&gt;  [97] 0.74000000 0.55102041 0.72000000 0.59183673 0.70000000 0.63265306</span></span>
+<span id="cb13-21"><a href="#cb13-21" tabindex="-1"></a><span class="co">#&gt; [103] 0.51020408 0.60000000 0.53061224 0.52000000 0.59183673 0.62500000</span></span>
+<span id="cb13-22"><a href="#cb13-22" tabindex="-1"></a><span class="co">#&gt; [109] 0.62000000 0.60000000 0.78000000 0.57142857 0.46938776 0.44897959</span></span>
+<span id="cb13-23"><a href="#cb13-23" tabindex="-1"></a><span class="co">#&gt; [115] 0.52000000 0.74000000 0.60000000 0.64000000 0.64000000 0.52000000</span></span>
+<span id="cb13-24"><a href="#cb13-24" tabindex="-1"></a><span class="co">#&gt; [121] 0.58333333 0.66666667 0.48000000 0.63265306 0.52000000 0.62000000</span></span>
+<span id="cb13-25"><a href="#cb13-25" tabindex="-1"></a><span class="co">#&gt; [127] 0.56000000 0.57142857 0.38297872 0.48000000 0.59183673 0.54000000</span></span>
+<span id="cb13-26"><a href="#cb13-26" tabindex="-1"></a><span class="co">#&gt; [133] 0.38000000 0.36000000 0.56000000 0.44897959 0.34042553 0.48979592</span></span>
+<span id="cb13-27"><a href="#cb13-27" tabindex="-1"></a><span class="co">#&gt; [139] 0.36734694 0.38000000 0.30612245 0.40000000 0.38000000 0.30612245</span></span>
+<span id="cb13-28"><a href="#cb13-28" tabindex="-1"></a><span class="co">#&gt; [145] 0.36000000 0.20833333 0.36734694 0.27083333 0.20833333 0.24000000</span></span>
+<span id="cb13-29"><a href="#cb13-29" tabindex="-1"></a><span class="co">#&gt; [151] 0.18000000 0.30612245 0.43750000 0.26000000 0.32000000 0.32653061</span></span>
+<span id="cb13-30"><a href="#cb13-30" tabindex="-1"></a><span class="co">#&gt; [157] 0.25531915 0.10000000 0.26530612 0.36734694 0.20408163 0.18750000</span></span>
+<span id="cb13-31"><a href="#cb13-31" tabindex="-1"></a><span class="co">#&gt; [163] 0.10000000 0.18367347 0.12244898 0.08333333 0.18367347 0.12244898</span></span>
+<span id="cb13-32"><a href="#cb13-32" tabindex="-1"></a><span class="co">#&gt; [169] 0.24489796 0.10416667 0.30000000 0.10416667 0.39583333 0.20408163</span></span>
+<span id="cb13-33"><a href="#cb13-33" tabindex="-1"></a><span class="co">#&gt; [175] 0.30000000 0.12244898 0.16666667 0.14285714 0.16666667 0.12500000</span></span>
+<span id="cb13-34"><a href="#cb13-34" tabindex="-1"></a><span class="co">#&gt; [181] 0.10000000 0.02083333 0.22448980 0.12244898 0.16326531 0.20000000</span></span>
+<span id="cb13-35"><a href="#cb13-35" tabindex="-1"></a><span class="co">#&gt; [187] 0.18750000 0.12000000 0.08510638 0.24489796 0.16326531 0.14285714</span></span>
+<span id="cb13-36"><a href="#cb13-36" tabindex="-1"></a><span class="co">#&gt; [193] 0.24489796 0.14893617 0.02127660 0.02040816 0.22000000 0.32000000</span></span>
+<span id="cb13-37"><a href="#cb13-37" tabindex="-1"></a><span class="co">#&gt; [199] 0.10204082 0.14583333</span></span>
+<span id="cb13-38"><a href="#cb13-38" tabindex="-1"></a></span>
+<span id="cb13-39"><a href="#cb13-39" tabindex="-1"></a><span class="co"># Inspect best solution</span></span>
+<span id="cb13-40"><a href="#cb13-40" tabindex="-1"></a>X_best <span class="ot">&lt;-</span> <span class="fu">vector_to_spatraster</span>(sa_res<span class="sc">$</span>X_best, n_h, dim_x, dim_y)</span>
+<span id="cb13-41"><a href="#cb13-41" tabindex="-1"></a><span class="fu">plot</span>(X_best)</span></code></pre></div>
+<p><img role="img" src="data:image/png;base64,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" /><!-- --></p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a></span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a><span class="co"># Inspect targets</span></span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>sa_res<span class="sc">$</span>g_best</span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a><span class="co">#&gt; [1] 5.551115e-17 2.000000e-01 0.000000e+00 1.000000e+00 0.000000e+00</span></span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a><span class="co">#&gt; [6] 0.000000e+00 0.000000e+00 1.800000e+00 2.000000e-01</span></span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a></span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a><span class="co"># Plot H(x) vs F(x) trace where improvements occur</span></span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a><span class="fu">plot_sa_improvements</span>(sa_res<span class="sc">$</span>H_trace, sa_res<span class="sc">$</span>F_trace) </span></code></pre></div>
+<p><img role="img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASAAAAEgCAMAAAAjXV6yAAAAb1BMVEUAAAAAADoAAGYAAJAAAP8AOpAAZrY6AAA6ADo6AGY6OpA6kNtmAABmADpmAGZmZmZmkJBmtrZmtv+QOgCQOjqQZgCQkGaQtpCQ2/+2ZgC225C2/7a2///bkDrb////AAD/tmb/25D//7b//9v///+YVLv5AAAACXBIWXMAAA7DAAAOwwHHb6hkAAAMNklEQVR4nO2diXajOBpGnbTj1IxdvTg93WE6jrHD+z9joxWxSJ8AyWDnu+ck5QgQcEsbPzJsKhJks/QBrB0KAlAQgIIAFASgIAAFASgIQEEACgJQEICCABQEoCAABQEoCEBBAAoCUBCAggAUBKAgAAUBKAhAQQAKAlAQgIIAFASgIAAFASgIQEEACgJQEICCABQEoCAABQEoCEBBAAoCUBCAggAUBKAgAAUBKAhAQQAKAlAQgIIAFASgIAAFASgIQEEACgJQEICCABQEoCAABQEoCEBBAAoCUBCAggAUBKAgAAUBKAhAQQAKAlAQgIIAFARILGhzN+QQdD3s699lnfvzR4LsFiWfoNPLp/h0nJ/domQTpNVITTOzW5Rsgi6vUlDZrmTtqr3djsh0IZYtQXdgKJMgUUZ2lWmuvdl9V0GVdPT0XndkHj8UFJnd+g1RECCToK831VehgeJ29YbyCDqZtsfbCJnsVm8oi6CvN6sFDhS/pSDnAqP0VLImu5UbWrQEnc/V9xRUt0G6CIE2SBjytEJfbzv5b2EMf70d9eXLEKV3iT6gzoFcf74HN+gcaMoV1f4PqhfzlB9XkDA04Kgn6LSr/IK8UQOzuPf/VHoPbehAU644KjtrqLdCV5BQMENQb3FdIMccaMIV49gO0FqhK0i09pfX3191XanrjPxwqRM2R/Fbr6cSKhWv0+VGpNWbF2rJ9edf4i9f69ghoyBfByYZLajYiROtr+8uryIapz/IMlVujraImAT5cz2oPFQJEjmI7a4HmWX5FNUKLSXIZHeWlWygKzNjcV0yZCsi3VSn5w8d033+MPuwgkyC6kiNBLFYNsvCn26QAi3+0IGmW9ESJagygrqKOiVIGlDnVJ+1OvH6z+tB7cQKMglqVSPBLC43slwdVZov0jB8oMlWVJzUf3+3GA/cLPAY6giSp3r5Ib38eC91JkdV0I5OK6wTlBqTLP+tD+n5/69rEVTFliAtqDceiihBhuLpXSw+2Va5TrAlSKbaLvByx4I6hnqCmjbo5bPdbdd/9RL6bZA8nLIpbffSBjWC2oa8vZg4R9kbiYIiDZSiBJnwgU7o92Kq8GxstHz5Xiwyu7NrqFnBPw5SNwN0sKnUDV1hxkEmwR0H2Tbo6V1Xx8p/leg90FQrjs6uERSKDoGx8mhi88snqC7OL59FOGivOJ+dhtqr6LQbewRBFr8Wq6u4bE1BRFFwbtUyn6HYi6c4lr6alyNZUctPMGAmaVez7bh9ZSXffbGjFIQjihJH0MoM5S5BRdzkhbNraFVBxsxtkA0touxWayhrL9a/FvNnd27XskpGbzY6tuNQti8/E9OP3K5gHKRx+zJhaLhyZhLjz32KoPAIZ3R2hnZvf8eCwAinmj5HMSSo0FEMHUFTV1d/1NV4f5GXH5cff6twrI6oqisNe/1vrvVb29jI7fUgUnXk1gZt/QcaPCM0wqmi5iieB2hf2bfviDTx0qYNkteuJxlffv6oT8vEWcWG+lpVXdHVrpsYrbONjdxeDyJVXabZoO1UQWiEU0XNMPMJagxtftk6OTbxUleQCYHUS5xQyN6JuAoNdYqN0ba2sak6mHK0YZGB844WhEY4VfwcxT5OO9TrxNx4adUKgSlBujI5oTVzyk6MtrWNE7k92rCSCdpOFoRGONWsWa6NoeLFHVJ34qUDgmQ4ti1IfKzrZv1faWO0bUEm1RVkgrbgQENnFB7hmBVi5igOYRTJEmoMdeOlcYLE7/L5H1WIOhk1JUjn1gpMFvb0lp2jOIg2pAVtZVo3XjpUxfZqI10KTMT1evhNNkPufTPzy7kX0hHUdC7rGSg6NIJMEXLipUr5gCAbZ1X3VU3EtZBF2cRoW9vY1EbQvgnajjxvpxfbgOl1o7IbRBjSnYA2ZOKlJrY6IEiHY03I2URcy1aMti3IpBpBMvey1YBMLkHBkPz47NrERWFbRN6kGM30KlbMCoGC/bYvy2JYn6B5RSheUKSh9QkKXGrM328nwjhjR3OZLMjelMuy307sY0FF03uxyNsmE/fbNTRnX7NY5ThIspIY7HoFTWioc7BqQaP7+gyMFGSH0XlH0oqzGx5aqqVecQnqTPygoCGWb6knCDLVbEoVQxHFLr27ZTdngiARAg99LSDpfu9QkIyZiLsas0aK0ftdekQ97a7G5T8f8ucG+136mmPaXQ1xF+ZGgrrt9HbGTqcwoQ0Sl/HF/lZVbGlDU7r5Yid6spwRxRbdmTG3dbTycZDk3Onsb2po9KVGorjdKN/tMnTb/n7CtViS6bgjC2TP0M0cja5i4sZs3CT+NPtVDAjazj6GKKbeep43fWqCoHMnZehbijmY2EiXM6Mdo9v887nfEN3E0Epv+/TpCZLkNzS9BOUN2g+xiKEsbVCm5ygOCcpuKEsvluk5it5alrMxyjIOyvQcxWFBmVvrLCPp6XMUEYOGJLkMZbkWy/ckTk8hqvINrjMJmjFHMYw25GmLJmYaYoVzFAHNrOouWRTdQ7ijQ9hQakd3KEgxbCm9okyCYp+jOANfOUqsKI+g+OcoziQ0dEyzhyyCxjxHcSbDvX5CQ5m6eTucjPzW83S8Q8dEku69BAXH1ikc5WqDzBOzMrdBobG1YDvbUqZeLPI5ignwDIkatvMk3e04yEFdfGQqSQ8lKFiSJhaljIIin0A1Hy0IFCLJ1iUq80cS5JSiyFYpQtRjCLJmWt+hBsQ5yiUo/jmKCXCFxAsyhBU9QgkaZIShYCdHQYpuu2RtPbCgs/tH3Ea3FXTL7AZw2qKxrZLL4woafDyIJ+AfIJ+g+OcoZsUZG40ZA1iyCRrxHMUb0i9QyFYuQSOfo3hjhmqeh3z3xUY9R3EhpJuwodwlKPI5iguzgKCxz1FcGNMgqc/ukqy92JjnKC6Lb0jw0OOgsVDQJCgIQEGAjBOogtMXvregehSEZplv7oYsguxLH+blOXd5/h1MXLdyH4Y6I89HFpQkTwrKvJyCFt/BxHVT5UlBmZdT0OI7mLhuqjy/vaCHgoIAFASgIAAFASgIQEEACgJQEICCABQEoCAABQGSCyr9UxvkV4L34ZXUvBrfcvGWuV0gAzHP/RhYPoHUguQrz4eP7etNvkVuF1qplF9F8y0Xz5qVr23wrHAyr2UPHMVYEgtS39ocfruLei7K6fnDv5KcIerNRKX7M9Av9tsFj2IsiQVZCd41Sv0qp8GVTi//qwX5lqt3jfn3YgXho4gntSD1vrTAoRXPH96V6gWiDfItFy9dU+/E9Kxgqhg+ingSC1IVP1D9xdeBfSuJmiEE+ZbLt2CKYuLdi26b4VGM4MaCStNGDwrQs0O9y590wfCtUMg3jfn/B6Zw2yqmvk7uWUkmh6qYalSaFx/2MjBNz4qrWLh51M/+8Kykv6ynX3k5kIk64/rsPSvYgrPiRjrYwZrJw6GVikA3r19z6O3m9TtZQ+OI8dxwoKheeAlWKkIDxZOx51nBtEErHijq1zr6lgjEUv9K6lLDt7w01yqeFQqwfAK8WAVQEICCABQEoCAABQEoCEBBAAoCUBCAggAUBKAgAAUBKAhAQQAKAlAQgIIAFASgIAAFASgIQEEACgJQEICCADcXlGhOQTdX80iRrz/fq+uvKea9aB5DUPPOmMt/P+VPMh5NULlTP8lYQtDl9Q8xW1VMmxczUv9+lXNWrj//EpM01QwXPRdKzjxXE1vdbSqTej2I1KNI1U++PO3VTzKWESRPvLYh5hO+1mcs5u5eD3LulPy001OeXz7FxE0xJ6q1TWVSrweR+vSuS5B9hti81w23WEbQXs83ExMy5bwz84RhNXlOPO6z1lCn6JcDC4/ONjZVfpAJuoolb6MXEnTUEwqlIF2Z5Emqv/Qp14mqxTKrmV82VW5T/7KCkrfRKxD0Q09NdQSJj8VO1LCyNfPVCjKpPUHJ2+h1ChK/xfcOjk2fN1CCKt17NYIepw1qVTE5ZVe0QUenDapP9jfZDJm6425jU3slqDjKZighKxCkv4GiZ0GrXqwSM1bFb/n1g6KzjU1tBKmeXbTPadvoNQj6XY1tdCmwM331EwnFiEdOf3YFmVQjqLYpa1X6Nnr5i1X9+vHVQkEACgIsLmjtUBCAggAUBKAgAAUBKAhAQQAKAlAQgIIAFASgIAAFASgIQEEACgJQEICCABQEoCDAv3cg/n2SMsSjAAAAAElFTkSuQmCC" /><!-- --></p>
+<p>If something looks off, tune temperature (initial T0 / Lam targets),
+proposal size (step_proportion), or emphasis (alpha, beta, gamma) and
+rerun. For most optimisations you will need many iterations to find a
+solutions that efficiently meets targets.</p>
+<p>It is also worth considering creating an ensemble of runs to evaluate
+consistency in the solutions. There are often multiple ways of reaching
+targets, especially where more generalist species are included as these
+can exploit many habitat opportunities, and it is worth evaluating cells
+that are consistently selection (i.e., irreplaceable) and those that are
+less consistently selected.</p>
+</div>
+<div id="references" class="section level3">
+<h3>References</h3>
+<p>Ben-Ameur, W., 2004. Computing the initial temperature of simulated
+annealing. Computational optimization and applications, 29(3),
+pp.369-385.</p>
+<p>Lam, J. and Delosme, J.M., 1988. An efficient simulated annealing
+schedule: derivation. New Haven, CT: Yale Electrical Engineering
+Department, 8816.</p>
+<p>Unnithan Kumar, S., Baker, D. J., Maclean, I. M. D., &amp; Gaston, K.
+J. (2025). Spatial prioritisation for nature recovery with multiple
+options for habitat creation. Journal of Applied Ecology, 00, 1–13. <a href="https://doi.org/10.1111/1365-2664.70144" class="uri">https://doi.org/10.1111/1365-2664.70144</a></p>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

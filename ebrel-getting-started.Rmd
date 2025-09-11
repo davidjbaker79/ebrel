@@ -1,0 +1,445 @@
+---
+title: "Getting started with **ebrel** - spatial prioritisation for nature recovery"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{ebrel-getting-started}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Ebrel: Spatial prioritisation for nature recovery
+
+This package provides the necessary functions to run a spatial prioritisation using the Ebrel model, as described in:
+
+> Unnithan Kumar, S., Baker, D. J., Maclean, I. M. D., & Gaston, K. J. (2025). Spatial prioritisation for nature     recovery with multiple options for habitat creation. Journal of Applied Ecology, 00, 1–13. https://doi.org/10.1111/1365-2664.70144
+
+The model is intended to help identify, given multiple candidate habitat types and costs, a spatial configuration of habitat creation or restoration that maximises biodiversity objectives subject to constraints, while accommodating species with different dispersal capacities and connectivity needs.
+
+This vignette demonstrates how to run the model using simulated data.
+
+
+## Setup
+
+The package can in installed from https://github.com/davidjbaker79/ebrel.git.
+
+```{r setup}
+
+# # Install from GitHub if needed
+# install.packages("remotes")
+# remotes::install_github("davidjbaker79/ebrel", build_vignettes = TRUE)
+
+# Load ebrel package
+library(ebrel)
+
+# Load terra for plotting spatRasters
+library(terra)
+
+```
+
+## Simulate data
+
+
+### What the simulator does
+
+`simulate_ebrel_spatial_data()` creates a **simulated planning landscape** and associated data for running **ebrel**. It draws autocorrelated habitat layers, marks some cells as unavailable, assigns **conversion costs** across the landscape associated with different habitat conversion options, and generates **species distributions** with configurable **rarity** and **dispersal distances**.
+
+The arguments for `simulate_ebrel_spatial_data()` are:
+
+| Argument         | Type            | What it controls                                                                 |
+|------------------|-----------------|----------------------------------------------------------------------------------|
+| `dim1`, `dim2`   | integer         | Grid size (rows × cols). Total cells = `dim1 * dim2`.                            |
+| `n_h`            | integer         | Number of habitat classes to simulate.                                           |
+| `n_s`            | integer         | Number of species to simulate.                                                   |
+| `disp_max`       | integer         | Upper bound on species’ dispersal (in cell units).                               |
+| `disp_longtail`  | numeric in [0,1]| Dispersal shape: low = mostly short dispersers; high = more long-tailed species. |
+| `rarity_bias`    | numeric ≥ 0     | Bias toward **rare** species. `0` ≈ equal prevalence; larger (e.g. 1–3) = rarer. |
+| `fixed_O`        | numeric/`NULL`  | If set, applies the same **occupancy target** to all species; else randomised.   |
+
+Calling this function (as below for a small landscape) returns a named list with the core inputs required for ebrel:
+
+- `E` — **Existing habitat** stack (`terra::SpatRaster`, layers `E1..E_nh`), one-hot (one habitat per cell).
+- `C` — **Conversion cost** stack (`SpatRaster`, layers `C1..C_nh`), very high where conversion is impossible.
+- `SD` — **Species presence/absence** stack (`SpatRaster`, one layer per species).
+- `SxH` — **Species × habitat** association matrix (`n_s × n_h`, 1 = species uses habitat).
+- `D` — Vector of **dispersal distances** (integers, capped by `disp_max`).
+- `O` — Vector of **occupancy targets** (from `fixed_O` or random draws).
+- `sigma` — Scalar weight derived from mean dispersal.
+- `dim`, `n_h`, `n_s` — Metadata on the landscape and simulation.
+
+We can create a small example for test running **ebrel**:
+
+```{r simulate-data}
+
+# Small (-ish) grid so that vignette isn't too slow
+dim_x <- dim_y <- 50 
+n_h <- 9 
+n_s <- 9
+disp_max <- 30
+disp_longtail <- 0.5    # ↑ → more long-distance dispersers
+rarity_bias <- 1        # ↑ → more rare (low-prevalence) species
+objective_targets <- 0.2  # same target applied to all species
+
+# Generate data
+ebrel_sim_data <- simulate_ebrel_spatial_data(
+  dim_x = dim_x,
+  dim_y = dim_y,
+  n_h = n_h,
+  n_s = n_s,
+  disp_max = disp_max,
+  disp_longtail = disp_longtail,
+  rarity_bias = rarity_bias,
+  fixed_O = objective_targets,
+  convert_to_cpp_format = FALSE,
+  seed = 1234
+)
+
+```
+
+By setting convert_to_cpp_format to FALSE, 'simulate_ebrel_spatial_data()' returns a list of data in R data formats (e.g., spatRasters, matrices); these cannot be directly supplied to the ebrel model but are useful here for visualising easily the simulated spatial data.
+
+```{r simulation plots}
+
+# Plot existing habitat layers
+plot(ebrel_sim_data$E[[1:9]])
+
+# Plot cost layers
+plot(ebrel_sim_data$C[[1:9]])
+
+# Plot species distribution layers
+plot(ebrel_sim_data$SD[[1:9]])
+
+# Dispersal distances
+ebrel_sim_data$D
+
+```
+
+If the simulation is run with convert_to_cpp_format = TRUE, 'simulate_ebrel_spatial_data()' returns the data in the appropriate format for passing to the ebrel functions.
+
+```{r}
+
+# # Generate data
+# ebrel_sim_data <- simulate_ebrel_spatial_data(
+#   dim_x = dim_x,
+#   dim_y = dim_y,
+#   n_h = n_h,
+#   n_s = n_s,
+#   disp_max = disp_max,
+#   disp_longtail = disp_longtail,
+#   rarity_bias = rarity_bias,
+#   fixed_O = objective_targets,
+#   convert_to_cpp_format = TRUE
+# )
+
+```
+
+## Running **ebrel** 
+
+### 1) Build the C++-aligned inputs (from `terra` objects)
+
+If you created data with `simulate_ebrel_spatial_data(..., convert_to_cpp_format = FALSE)` (or have your own
+`terra` rasters), convert them to the flattened, C++-ready layout using 'prepare_ebrel_r_to_cpp':
+
+```{r}
+
+ebrel_cpp_in <- prepare_ebrel_r_to_cpp(
+  E_rast  = ebrel_sim_data$E,     # SpatRaster, n_h layers
+  C_rast  = ebrel_sim_data$C,     # SpatRaster, n_h layers (sentinel = very large => unavailable)
+  SD_rast = ebrel_sim_data$SD,    # SpatRaster, n_s layers
+  D_vec   = ebrel_sim_data$D,     # length n_s
+  SxH_mat = ebrel_sim_data$SxH,   # n_s x n_h
+  O_vec   = ebrel_sim_data$O,     # length n_s
+  sigma   = ebrel_sim_data$sigma  # positive numeric
+)
+
+```
+
+This function requires the following inputs: 
+
+| Argument   | Type / Shape                              | Description |
+|------------|-------------------------------------------|-------------|
+| `E_rast`   | `terra::SpatRaster` with **n_h** layers   | Habitat stack (one layer per habitat option). Must align (extent/resolution/CRS/rows/cols) with `C_rast` and `SD_rast`. |
+| `C_rast`   | `terra::SpatRaster` with **n_h** layers   | Conversion cost/constraint stack. Values ≥ `1e11` are treated as **unavailable** downstream. Must align with `E_rast`. |
+| `SD_rast`  | `terra::SpatRaster` with **n_s** layers   | Species/feature baseline distributions (one layer per species/feature). Must align with `E_rast`. |
+| `D_vec`    | numeric vector, length **n_s**            | Species/feature maximum dispersal distances (in **cells**). |
+| `SxH_mat`  | matrix `n_s × n_h` (numeric/integer/logical) | Species–habitat associations (ideally 0/1; non-binary values are passed through with a warning). |
+| `O_vec`    | numeric vector, length **n_s**            | Species/feature targets (e.g., proportional increases). |
+| `sigma`    | positive numeric scalar                   | Distance-decay strength used to weight candidate updates (used as \(w = \exp(-\sigma \cdot d)\), with \(d\) the integer hop distance). |
+
+The function infers dim_x/dim_y from the rasters, validates shapes, and flattens everything using layer-major
+order (all cells of layer 1, then layer 2, …).
+
+### 2) Create the **ebrel** object (validation + unavailable mask)
+
+'create_ebrel_class_object_R()' calls the C++ setup that validates inputs and constructs the unavailable mask U
+from the cost stack C using a sentinel threshold (cells with costs ≥ sentinel are unavailable).
+
+The function performs the following checks and data transformations:
+
+* validate_dimensions(...) ensures all vector lengths match:
+  + E, C: dim_x * dim_y * n_h
+  + SD: dim_x * dim_y * n_s
+  + SxH: n_h * n_s
+  + O: n_s
+
+* validate_existing_habitat(E, dim_x, dim_y, n_h) enforces one-hot existing habitat (≤1 habitat per cell).
+* get_unavailable_mask(C, n_h, dim_x, dim_y, sentinel) builds U (binary, same shape as E/C).
+
+Memory layout (flattening) in C++:
+
+* Habitat-major 3D fields (E, C, U): idx = h * (dim_x * dim_y) + cell
+* Species-major 3D field (SD): idx = s * (dim_x * dim_y) + cell
+* SxH (n_h × n_s, flattened): idx = h * n_s + s
+* O: species-level (length = n_s)
+
+Create the object by calling 'create_ebrel_class_object_R()' as:
+
+```{r}
+
+ebrel_object_cpp <- create_ebrel_class_object_R(
+  E      = ebrel_cpp_in$E,
+  C      = ebrel_cpp_in$C,
+  SD     = ebrel_cpp_in$SD,
+  D      = ebrel_cpp_in$D,
+  SxH    = ebrel_cpp_in$SxH,
+  O      = ebrel_cpp_in$O,
+  dim_x  = ebrel_cpp_in$dim_x,
+  dim_y  = ebrel_cpp_in$dim_y,
+  n_h    = n_h,
+  n_s    = n_s,
+  sentinel = 1e10   # cells with C >= sentinel are unavailable
+)
+
+```
+
+### 3) Run **ebrel** optimiser
+
+At this stage we configure and run the **simulated annealing (SA)** optimiser. SA’s behaviour is
+mainly driven by (i) how proposals are made, (ii) the temperature schedule, and (iii) the
+early-stopping rules. The literature on these aspects of SA is vast, but we have selected a few customisable options to control the behaviour of the SA algorithm. Below is a quick guide to the key parameters and practical defaults.
+
+#### Proposal mechanics
+
+| Parameter | What it does | Typical range / tips |
+|---|---|---|
+| `step_proportion` | Fraction of **eligible cells** considered per proposal. Larger ⇒ bigger moves per step. | 0.02–0.10. Start at `0.05`. |
+| `step_probability` | For a considered cell, probability of assigning **any** (non-zero) habitat. | 0.02–0.20. Start at `0.05`. |
+| `sigma` | Distance-decay strength in the candidate sampler, used like \(w=\exp(-\sigma d)\). Larger ⇒ more local moves. | >0. If species disperse farther, use smaller `sigma` (e.g. `0.03–0.10`); for tight clustering use `0.10–0.25`. A useful starting point is to estimate sigma as 1 / mean(D). |
+| `base_prob_X0` | If `X0=NULL`, controls the **sparseness** of the auto-generated seed (probability of *no* habitat). | 0.7–0.9 keeps starts fairly empty. |
+
+#### Objective scaling & ecological controls
+
+| Parameter | What it does | Notes |
+|---|---|---|
+| `alpha`, `beta`, `gamma` | Weights for targets, aggregation, and costs. | Internally, `beta`/`gamma` are rescaled against the initial `X0` so magnitudes are comparable. Use these to change emphasis, e.g., towards a more aggregated solution. |
+| `max_disp_thres`, `disp_boundary` | Dispersal gating for species effects. | `disp_boundary` just sets an upper limited on the search area of species dispersal (e.g., if the study is considering a time horizon of 30 years and we assume a single dispersal event per year, then we might set this to ~30) ; set `max_disp_thres` based on the strongest dispersing species where it is judged likely they will be able to reach any part of the landscape by hopping large distances (skips the BFS search). The units for both of these controls in in grid cells. |
+
+#### Temperature schedule
+
+You can set the initial temperature yourself (`temp`), or estimate it to hit a target uphill acceptance \(\chi_0\) with `estimate_initial_temp_R()` (Ben-Ameur).
+
+| Parameter | What it does | Typical values |
+|---|---|---|
+| `temp` | Initial temperature \(T_1\). | Use output of `estimate_initial_temp_R()`; otherwise try `1000–5000` on small grids and check acceptance. |
+| `cooling_rate_c` | Harmonic/geometric cooling constant (when `lam_enabled=FALSE`). | `1.0` is a safe default. Increase to cool faster. |
+| `lam_enabled` | Enable Lam–Delosme **adaptive** schedule (keeps uphill acceptance near a time-varying target). | `TRUE` recommended. |
+| `lam_target_mid` | Target uphill acceptance in early/mid run. | ~`0.3–0.6` (default `0.44`). |
+| `lam_target_final` | Target uphill acceptance at the end. | ~`0.02–0.08`. |
+| `lam_hold_frac` | Fraction of the run to **hold** `lam_target_mid` before decaying to final. | `0.5–0.7` (default `0.60`). |
+| `lam_p` | Damping exponent in the Ben-Ameur correction used by the controller. Higher ⇒ smoother updates. | `2` is a good default. |
+
+#### Budget & stopping
+
+| Parameter | What it does | Practical guidance |
+|---|---|---|
+| `n_iterations` | Max proposals (not counting no-ops). | Start `1e4–5e4` (small) or much higher for large grids. |
+| `acceptance_window` | Window size for measuring acceptance rate and applying Lam updates. | ~`n_iterations/200` (0.5% of run). Ensure `≥ 50`. |
+| `min_iterations` | Never stop before this many **real** proposals. | ~`10 × acceptance_window` (e.g. `2000`). |
+| `acceptance_thres` | “Low” acceptance threshold used in early-stop logic. | `0.005–0.02`. |
+| `iter_no_improve` | Patience (proposals) without meaningful improvement before early stop can trigger. | ~`n_iterations/10` (e.g. `2000`). |
+| `improve_eps` | Relative improvement needed to reset patience. | `1e-6` to `1e-5`. |
+| `seed`, `verbose` | RNG control and logging. | Set `seed` for reproducibility; `verbose=TRUE` prints per-window stats. |
+
+### Example run
+
+#### - Set parameters
+
+```{r}
+# Proposal & budget
+step_proportion  <- 0.05
+step_probability <- 0.05
+n_iterations     <- 10000 # Low number for quick example
+acceptance_window<- max(50L, round(n_iterations / 200))
+
+# Distance weighting
+sigma <- 0.15      # more local proposals; try 0.05–0.10 if species disperse far
+
+# Adaptive schedule (Lam–Delosme)
+lam_enabled      <- TRUE
+lam_p            <- 2
+lam_target_mid   <- 0.44
+lam_target_final <- 0.02
+lam_hold_frac    <- 0.60
+
+# Early stopping
+min_iterations   <- acceptance_window * 10
+acceptance_thres <- 0.01
+iter_no_improve  <- 2000
+improve_eps      <- 1e-6
+
+# Objective emphasis (internally re-scaled)
+alpha <- 1.0 # Emphasis on meeting targets
+beta <- 25.0 
+gamma <- 100.0
+
+# Species dispersal limits
+max_disp_thres <- 30 # The grid dims are small so assume if a species can hop 30 cells it can reach anywhere.
+disp_boundary <- 30 # Likely won't have much effect on small grid, but will speed up large problems.
+
+```
+
+#### i) Choose an initial SA temperature (Optional, but recommended)
+
+Using the estimate_initial_temp_R() we can call a C++ function to estimate a suitable initial temperature \(T_1\) that targets a desired **uphill** acceptance rate \(\chi_0\) using the **Ben-Ameur (2004)** fixed-point approach.
+
+We recommend using `estimate_initial_temp_R()` to get a `temp` that yields your desired “warmth” at the start (e.g. > \(\chi_0=0.8\)). Then keep `lam_enabled=TRUE` so the controller adapts the temperature as the run progresses.
+
+
+#### Using it in **ebrel**
+
+```{r}
+
+T0_out <- estimate_initial_temp_R(
+  ebrel_obj        = ebrel_object_cpp,
+  X0               = NULL,  # use if you have a initial starting point for the model
+  base_prob_X0     = 0.85,  # if X0 is NULL, ebrel generates an X0 using base_prob_X0
+  max_disp_thres   = max_disp_thres,
+  disp_boundary    = disp_boundary,
+  alpha            = alpha,
+  beta             = beta,
+  gamma            = gamma,
+  step_proportion  = step_proportion,
+  step_probability = step_probability,
+  num_samples      = 400,   # proposals per iteration to estimate chi
+  chi0             = 0.8,   # target uphill acceptance
+  p                = lam_p,   # damping exponent in the update
+  tol_logchi       = 1e-3,  # stop when |log(chi_hat)-log(chi0)| <= tol
+  max_iters        = 50,    # safety cap
+  sigma            = sigma,
+  seed             = 1234,
+  verbose          = TRUE
+)
+
+T0_out$T0            # the recommended T1
+T0_out$chi_hat_final # achieved uphill acceptance at T1
+T0_out$iters         # number of fixed-point updates performed
+
+```
+
+#### ii) Run the SA optimiser
+
+We now launch the optimiser. Here we enable the **Lam–Delosme adaptive schedule** (`lam_enabled = TRUE`), which
+uses the Ben-Ameur correction described above to nudge the temperature so that the **uphill acceptance rate**
+tracks a target curve: it holds around `lam_target_mid` early on, then decays toward `lam_target_final`
+after `lam_hold_frac` of the run has elapsed. The damping exponent `lam_p` (we use 2) makes these updates
+stable rather than jittery. Paired with the initial temperature \(T_1\) estimated earlier, this keeps the
+search “warm” enough to explore at the start and gradually cools to refine solutions.
+
+```{r}
+
+# Test runtime scaling
+sa_res <- run_ebrel_R(
+  ebrel_obj = ebrel_object_cpp,
+  X0 = NULL,
+  max_disp_thres = max_disp_thres,
+  disp_boundary = disp_boundary,
+  alpha = alpha,
+  beta = beta,
+  gamma = gamma,
+  sigma = sigma,
+  base_prob_X0 = 0.85,
+  temp = T0_out$T0,
+  step_proportion = step_proportion,
+  step_probability = step_probability,
+  n_iterations = n_iterations,
+  lam_enabled = TRUE,
+  lam_target_mid = lam_target_mid,
+  lam_target_final = lam_target_final,
+  lam_hold_frac = lam_hold_frac,
+  lam_p = lam_p,
+  min_iterations = min_iterations,
+  acceptance_window = acceptance_window,
+  acceptance_thres = acceptance_thres,
+  iter_no_improve = iter_no_improve,
+  improve_eps = improve_eps,
+  seed = 1234,
+  verbose = TRUE
+)
+
+```
+
+### Inspecting the optimiser output
+
+After a run, it’s useful to sanity-check both the **search dynamics** and the **solution**:
+
+- **Acceptance profile** (`sa_res$acc_rate_trace`)  
+  Expect higher acceptance early (warm) that declines as the run cools.  
+  - If it crashes to ~0 very early → start hotter (re-estimate `T0`), raise `lam_target_mid`, or reduce `step_proportion`.  
+  - If it stays very high late in the run → cool faster (lower `lam_target_final`, raise `cooling_rate_c`, or reduce `lam_hold_frac`).
+
+- **Best allocation** (`sa_res$X_best`)  
+  Convert back to rasters and plot by habitat. Check that:  
+  - Feasibility is respected (no assignments where `U==1`).  
+  - Patterns make ecological sense (aggregation vs. spread matches your `beta`, `sigma`, and dispersal).  
+  - Costs concentrate where benefits are highest.
+
+- **Target shortfalls** (`sa_res$g_best`)  
+  Values near 0 mean targets are met; positive values indicate unmet targets.  
+  - Inspect which species are driving the objective; consider adjusting `alpha` or revisiting `O`, `SxH`, or dispersal.
+  - It might not be possible to reach targets for some species (i.e., if there are few habitat opportunities available than are required). In this case targets might need to be lowered for these species by pre-computing available opportunities.
+
+- **Trajectory diagnostics** (`H_trace`, `F_trace`)  
+  Plot objective vs. auxiliary trace to see if improvements in `H` align with improvements in `F`.  
+  - Use an improvements-only plot (e.g. `plot_sa_improvements`) to focus on steps where the best solution improved.
+  - When all species targets are met H(x) will equal F(x). After this point improvements are related to spatial configuration and costs.
+
+Helpful run summaries:
+- `sa_res$early_stop_iter` (if early stopping triggered)
+- `sa_res$proposals`, `sa_res$accepted`, `sa_res$overall_acc`
+- length of `sa_res$H_trace` (number of evaluated proposals)
+
+
+```{r}
+
+# Inspect acceptance rate trace
+sa_res$acc_rate_trace
+
+# Inspect best solution
+X_best <- vector_to_spatraster(sa_res$X_best, n_h, dim_x, dim_y)
+plot(X_best)
+
+# Inspect targets
+sa_res$g_best
+
+# Plot H(x) vs F(x) trace where improvements occur
+plot_sa_improvements(sa_res$H_trace, sa_res$F_trace) 
+
+```
+
+If something looks off, tune temperature (initial T0 / Lam targets), proposal size (step_proportion), or emphasis (alpha, beta, gamma) and rerun. For most optimisations you will need many iterations to find a solutions that efficiently meets targets.
+
+It is also worth considering creating an ensemble of runs to evaluate consistency in the solutions. There are often multiple ways of reaching targets, especially where more generalist species are included as these can exploit many habitat opportunities, and it is worth evaluating cells that are consistently selection (i.e., irreplaceable) and those that are less consistently selected. 
+
+### References
+
+Ben-Ameur, W., 2004. Computing the initial temperature of simulated annealing. Computational optimization and applications, 29(3), pp.369-385.
+
+Lam, J. and Delosme, J.M., 1988. An efficient simulated annealing schedule: derivation. New Haven, CT: Yale Electrical Engineering Department, 8816.
+
+Unnithan Kumar, S., Baker, D. J., Maclean, I. M. D., & Gaston, K. J. (2025). Spatial prioritisation for nature     recovery with multiple options for habitat creation. Journal of Applied Ecology, 00, 1–13. https://doi.org/10.1111/1365-2664.70144
