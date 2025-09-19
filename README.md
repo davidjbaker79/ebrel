@@ -30,7 +30,7 @@ See vignette for example.
 
 ________________________________________
 # How it works (high level)
-* Objective functions: Identical to Unnithan Kumar et al. (2025), combining habitat suitability, species distributions, conversion costs, and connectivity terms into a single score HH.
+* Objective functions: Identical to Unnithan Kumar et al. (2025), combining habitat suitability, species distributions, conversion costs, and connectivity terms into a single score.
 * Connectivity & accessibility: Computed via BFS on a rook/queen adjacency graph to assess reachability of proposed habitat from current species’ distributions within species-specific dispersal thresholds.
 * Dispersal tiers: Supports species with differing dispersal capacities (e.g., highly limited, moderate/stepping-stone, and good dispersers) through configurable connectivity logic.
 * Search algorithm: A simulated-annealing-like metaheuristic proposes local changes (cell ↦ habitat type) using distance-weighted probabilities, with a Metropolis acceptance rule and early-stopping heuristics.
