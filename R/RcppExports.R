@@ -21,11 +21,3 @@ compute_G_R <- function(X, E, SD, SxH, D, n_h, n_s, dim_x, dim_y, universal_disp
     .Call(`_ebrel_compute_G_R`, X, E, SD, SxH, D, n_h, n_s, dim_x, dim_y, universal_disp_thres, max_disp_steps, roi_cap, LM, row_first_land, row_last_land, col_first_land, col_last_land)
 }
 
-omp_thread_count_test <- function() {
-    .Call(`_ebrel_omp_thread_count_test`)
-}
-
-openmp_threads <- function() {
-    .Call(`_ebrel_openmp_threads`)
-}
-

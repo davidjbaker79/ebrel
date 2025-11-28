@@ -418,5 +418,3 @@ Rcpp::NumericVector compute_G_R(const Rcpp::NumericVector& X,
   return Rcpp::NumericVector(G.begin(), G.end());
 
 }
-
-

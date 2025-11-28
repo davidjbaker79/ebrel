@@ -144,26 +144,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// omp_thread_count_test
-int omp_thread_count_test();
-RcppExport SEXP _ebrel_omp_thread_count_test() {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(omp_thread_count_test());
-    return rcpp_result_gen;
-END_RCPP
-}
-// openmp_threads
-int openmp_threads();
-RcppExport SEXP _ebrel_openmp_threads() {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(openmp_threads());
-    return rcpp_result_gen;
-END_RCPP
-}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_ebrel_create_ebrel_class_object_R", (DL_FUNC) &_ebrel_create_ebrel_class_object_R, 13},
@@ -171,8 +151,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_ebrel_generate_X0_A_R", (DL_FUNC) &_ebrel_generate_X0_A_R, 6},
     {"_ebrel_estimate_initial_temp_R", (DL_FUNC) &_ebrel_estimate_initial_temp_R, 21},
     {"_ebrel_compute_G_R", (DL_FUNC) &_ebrel_compute_G_R, 17},
-    {"_ebrel_omp_thread_count_test", (DL_FUNC) &_ebrel_omp_thread_count_test, 0},
-    {"_ebrel_openmp_threads", (DL_FUNC) &_ebrel_openmp_threads, 0},
     {NULL, NULL, 0}
 };
 
