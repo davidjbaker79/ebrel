@@ -79,7 +79,10 @@ std::vector<double> generate_X0_A(const std::vector<double>& U,
     for (int k = 0; k < n_h; ++k) {
       int h = (h0 + k) % n_h; // probe all habitats in a rotated order
       std::size_t idx = static_cast<std::size_t>(h) * cells + tile;
-      if (U[idx] == 0.0) { X0[idx] = 1.0; break; }
+      if (U[idx] == 0.0) {
+        X0[idx] = 1.0;
+        break;
+      }
     }
   }
 

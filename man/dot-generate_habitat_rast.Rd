@@ -8,7 +8,8 @@
   dim_x = 50,
   dim_y = 50,
   n_h = 4,
-  unavail_hab_prop = 0.25
+  unavail_hab_prop = 0.1,
+  prop_sea = 0.2
 )
 }
 \arguments{

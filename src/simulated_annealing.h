@@ -5,6 +5,7 @@
 
 #include <vector>
 #include <stdexcept>
+#include <cstdint>
 
 // ------------------------------- Main functions ------------------------------
 
@@ -40,15 +41,21 @@ SAResult simulated_annealing(
     const std::vector<double>& SD,    // per compute_H
     const std::vector<double>& SxH,   // flattened matrix for compute_H
     const std::vector<int>& D,        // dispersal thresholds, etc.
-    int max_disp_thres,               // threshold after which universal dispersal is assumed
-    int disp_boundary,                // limit for dispersal as D[sp] x disp_boundary
     int n_h,                          // number of habitats/classes per cell
     int n_s,                          // number of species/features
     int dim_x,                        // X dimension (e.g. longitude or easting)
     int dim_y,                        // Y dimension (e.g. latitude or northing)
+    int universal_disp_thres,         // threshold after which universal dispersal is assumed
+    int max_disp_steps,               // limit for dispersal as D[sp] x universal_disp_thres
+    int roi_cap,                      // ROI cap in cells (upper limit for D[sp] x universal_disp_thres)
+    const std::vector<uint8_t>& LM,
+    const std::vector<int>& row_first_land,
+    const std::vector<int>& row_last_land,
+    const std::vector<int>& col_first_land,
+    const std::vector<int>& col_last_land,
     double alpha_scaled,              // scaling on targets
     double beta_scaled,               // scaling on spatial aggregation
-    double gamma_scaled,              // scaling on costs
+    double gamma_scaled,              // scaling on cost
     double step_proportion,           // proportion of eligible cells to update
     double step_probability,          // probability of assigning any habitat
     int n_iterations,                 // max number of iterations for SA

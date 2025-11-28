@@ -31,6 +31,7 @@
 #' @param O Numeric vector of length \code{n_s}; species/feature targets (e.g., proportional increase in occupancy).
 #' @param dim_x Integer; number of grid cells along the x/longitude/easting dimension.
 #' @param dim_y Integer; number of grid cells along the y/latitude/northing dimension.
+#' @param LM Numeric vector of length \code{n_cells}; encodes land mask.
 #' @param n_h Integer; number of habitats considered in spatial prioritisation.
 #' @param n_s Integer; number of species/features considered in spatial prioritisation.
 #' @param sentinel Numeric; sentinel value for missing/unavailable cells.
@@ -42,11 +43,14 @@
 #' @examples
 #' \dontrun{
 #' n_x <- 100; n_y <- 80
-#' obj <- create_ebrel_class_object_R(E, C, SD, D, SxH, O, n_x, n_y, 5, 12)
+#' obj <- create_ebrel_class_object_R(E, C, P, SD, D, SxH, O, n_x, n_y, 5, 12)
 #' }
 #' @export
-create_ebrel_class_object_R <- function(E, C, SD, D, SxH, O,  dim_x, dim_y, n_h, n_s, sentinel = 1e10, sigma) {
-  .Call("_ebrel_create_ebrel_class_object_R", PACKAGE = "ebrel", E, C, SD, D, SxH, O, dim_x, dim_y, n_h, n_s, sentinel, sigma)
+create_ebrel_class_object_R <- function(E, C, SD, D, SxH, O, LM,
+                                        dim_x, dim_y, n_h, n_s,
+                                        sentinel = 1e10, sigma) {
+  .Call("_ebrel_create_ebrel_class_object_R", PACKAGE = "ebrel", E, C, SD, D, SxH, O,
+        LM, dim_x, dim_y, n_h, n_s, sentinel, sigma)
 }
 
 #' Run the ebrel optimization
@@ -57,8 +61,9 @@ create_ebrel_class_object_R <- function(E, C, SD, D, SxH, O,  dim_x, dim_y, n_h,
 #' @param X0 Optional initial configuration.
 #' @param base_prob_X0 Numeric; probability of assigning **no** habitat in a creation step.
 #' @param sigma Numeric; controls distance weighting when selecting candidates.
-#' @param max_disp_thres Numeric threshold after which universal dispersal is assumed.
-#' @param disp_boundary Numeric factor setting the dispersal limit as \code{D[sp] * disp_boundary}.
+#' @param universal_disp_thres Numeric; distance (in cells) after which universal dispersal is assumed.
+#' @param max_disp_steps Numeric; dispersal limit factor (number of consecutive hops) applied as \code{D[sp] * max_disp_steps}.
+#' @param roi_cap Numeric; capping the size of the region of interested (roi) to prevent ballooning.
 #' @param alpha Numeric weight for target attainment.
 #' @param beta Numeric weight for spatial aggregation.
 #' @param gamma Numeric weight for costs.
@@ -95,8 +100,9 @@ create_ebrel_class_object_R <- function(E, C, SD, D, SxH, O,  dim_x, dim_y, n_h,
 #' @export
 run_ebrel_R <- function(ebrel_obj,
                         X0 = NULL,
-                        max_disp_thres = 50,
-                        disp_boundary = 30,
+                        universal_disp_thres = 50,
+                        max_disp_steps = 30,
+                        roi_cap = 200,
                         alpha = 1,
                         beta = 25,
                         gamma = 100,
@@ -125,8 +131,9 @@ run_ebrel_R <- function(ebrel_obj,
         X0,
         base_prob_X0,
         sigma,
-        max_disp_thres,
-        disp_boundary,
+        universal_disp_thres,
+        max_disp_steps,
+        roi_cap = 200,
         alpha,
         beta,
         gamma,
@@ -162,11 +169,14 @@ run_ebrel_R <- function(ebrel_obj,
 #'
 #' @param ebrel_obj External pointer created by \code{create_ebrel_class_object_R()}.
 #' @param X0 Optional initial configuration (type/shape as expected by \code{run_ebrel_R()}).
-#' @param max_disp_thres Numeric; distance (in cells) after which universal dispersal is assumed.
-#' @param disp_boundary Numeric; dispersal limit factor applied as \code{D[sp] * disp_boundary}.
+#' @param universal_disp_thres Numeric; distance (in cells) after which universal dispersal is assumed.
+#' @param max_disp_steps Numeric; dispersal limit factor (number of consecutive hops) applied as \code{D[sp] * max_disp_steps}.
+#' @param roi_cap Numeric; capping the size of the region of interested (roi) to prevent ballooning.
 #' @param alpha Numeric; weight for target attainment in the objective.
 #' @param beta Numeric; weight for spatial aggregation in the objective.
 #' @param gamma Numeric; weight for costs in the objective.
+#' @param transit_threshold Numeric; the proportion of the cell containing target habitat to be consider transitable by a species. Only used when fract_G is TRUE. Default = 0.05,
+#' @param fract_G Logical; Whether to use binary or proportional values in the compute_G function, reflecting the proportion of a grid cell avaiable for conversion to a particular habitat type. Default = FALSE.
 #' @param step_proportion Numeric in (0, 1]; proportion of eligible cells considered per proposal.
 #' @param step_probability Numeric in [0, 1]; probability of assigning any habitat during a proposal.
 #' @param num_samples Integer > 0; number of random neighbour proposals used to estimate acceptance.
@@ -212,8 +222,9 @@ run_ebrel_R <- function(ebrel_obj,
 estimate_initial_temp_R <- function(ebrel_obj,
                                     X0 = NULL,
                                     base_prob_X0 = 0.85,
-                                    max_disp_thres = 50,
-                                    disp_boundary = 30,
+                                    universal_disp_thres = 10,
+                                    max_disp_steps = 10,
+                                    roi_cap = 100,
                                     alpha = 1.0,
                                     beta = 25.0,
                                     gamma = 100.0,
@@ -234,8 +245,9 @@ estimate_initial_temp_R <- function(ebrel_obj,
         ebrel_obj,
         X0,
         base_prob_X0,
-        max_disp_thres,
-        disp_boundary,
+        universal_disp_thres,
+        max_disp_steps,
+        roi_cap,
         alpha,
         beta,
         gamma,
@@ -253,3 +265,11 @@ estimate_initial_temp_R <- function(ebrel_obj,
         verbose
   )
 }
+
+#' Generate naive starting point
+#'
+#' @export
+generate_X0_A_R <- function(U, n_h, dim_x, dim_y, base_prob = 0.85, seed) {
+  .Call("_ebrel_generate_X0_A_R", PACKAGE = "ebrel", U, n_h, dim_x, dim_y, base_prob, seed)
+}
+

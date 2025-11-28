@@ -11,6 +11,7 @@
 #include <iostream>
 #include <limits>
 #include <cmath>
+#include <cstdint>
 
 //---------------------- Local helper functions --------------------------------
 
@@ -45,6 +46,7 @@ namespace {
     if (!in.X0.empty()) {
       ensure(in.X0.size() == Hsz, "X0 size mismatch (expected dim_x*dim_y*n_h)");
     }
+
   }
 
 }
@@ -66,10 +68,29 @@ RunEBRELResult run_ebrel(const RunEBRELInput& in, const RunEBRELOptions& opt) {
   // --- Initial objectives (for scaling) ---
   const double F1 = compute_F1(X0, in.C, in.n_h, in.dim_x, in.dim_y);
   const double F2 = compute_F2(X0, in.E, in.n_h, in.dim_x, in.dim_y);
-  std::vector<double> G = compute_G(X0, in.E, in.SD, in.SxH, in.D,
-                                    in.n_h, in.dim_x, in.dim_y,
-                                    in.max_disp_thres, in.disp_boundary);
-  const double G_sum = std::accumulate(G.begin(), G.end(), 0.0);
+
+  // Use the same G variant as SA so scaling matches the run
+  std::vector<double> G_init;
+  G_init = compute_G(
+    X0,
+    in.E,
+    in.SD,
+    in.SxH,
+    in.D,
+    in.n_h,
+    in.n_s,
+    in.dim_x,
+    in.dim_y,
+    in.universal_disp_thres,
+    in.max_disp_steps,
+    in.roi_cap,
+    in.LM,
+    in.row_first_land,
+    in.row_last_land,
+    in.col_first_land,
+    in.col_last_land
+  );
+  const double G_sum = std::accumulate(G_init.begin(), G_init.end(), 0.0);
 
   // Safe rescaling
   const double eps = 1e-12;
@@ -101,12 +122,18 @@ RunEBRELResult run_ebrel(const RunEBRELInput& in, const RunEBRELOptions& opt) {
     in.SD,
     in.SxH,
     in.D,
-    in.max_disp_thres,
-    in.disp_boundary,
     in.n_h,
     in.n_s,
     in.dim_x,
     in.dim_y,
+    in.universal_disp_thres,
+    in.max_disp_steps,
+    in.roi_cap,
+    in.LM,
+    in.row_first_land,
+    in.row_last_land,
+    in.col_first_land,
+    in.col_last_land,
     alpha_scaled,
     beta_scaled,
     gamma_scaled,

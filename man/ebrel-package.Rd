@@ -6,7 +6,7 @@
 \alias{ebrel-package}
 \title{ebrel: Ebrel - Spatial prioritisation for nature recovery}
 \description{
-R package for setting up and running a spatial prioritisation for habitat creation with multiple options. For technical details see Unnithan Kumar, S., Baker, D. J., Maclean, I. M. D., & Gaston, K. J. (2025). Spatial prioritisation for nature recovery with multiple options for habitat creation. Journal of Applied Ecology, 00, 1–13. 10.1111/1365-2664.70144
+R package for setting up and running a spatial prioritisation for habitat creation with multiple options. For technical details see Unnithan Kumar, S., Baker, D. J., Maclean, I. M. D., & Gaston, K. J. (2025). Spatial prioritisation for nature recovery with multiple options for habitat creation. Journal of Applied Ecology, 00, 1–13. 10.1111/1365-2664.70144.
 }
 \author{
 \strong{Maintainer}: David Baker \email{d.baker2@exeter.ac.uk} (\href{https://orcid.org/0000-0002-0466-8222}{ORCID})

@@ -8,8 +8,9 @@ estimate_initial_temp_R(
   ebrel_obj,
   X0 = NULL,
   base_prob_X0 = 0.85,
-  max_disp_thres = 50,
-  disp_boundary = 30,
+  universal_disp_thres = 10,
+  max_disp_steps = 10,
+  roi_cap = 100,
   alpha = 1,
   beta = 25,
   gamma = 100,
@@ -32,9 +33,11 @@ estimate_initial_temp_R(
 
 \item{X0}{Optional initial configuration (type/shape as expected by \code{run_ebrel_R()}).}
 
-\item{max_disp_thres}{Numeric; distance (in cells) after which universal dispersal is assumed.}
+\item{universal_disp_thres}{Numeric; distance (in cells) after which universal dispersal is assumed.}
 
-\item{disp_boundary}{Numeric; dispersal limit factor applied as \code{D[sp] * disp_boundary}.}
+\item{max_disp_steps}{Numeric; dispersal limit factor (number of consecutive hops) applied as \code{D[sp] * max_disp_steps}.}
+
+\item{roi_cap}{Numeric; capping the size of the region of interested (roi) to prevent ballooning.}
 
 \item{alpha}{Numeric; weight for target attainment in the objective.}
 
@@ -63,6 +66,10 @@ estimate_initial_temp_R(
 \item{seed}{Optional integer; RNG seed (use \code{NULL} for non-deterministic seeding).}
 
 \item{verbose}{Logical; print progress messages.}
+
+\item{transit_threshold}{Numeric; the proportion of the cell containing target habitat to be consider transitable by a species. Only used when fract_G is TRUE. Default = 0.05,}
+
+\item{fract_G}{Logical; Whether to use binary or proportional values in the compute_G function, reflecting the proportion of a grid cell avaiable for conversion to a particular habitat type. Default = FALSE.}
 
 \item{T1_in}{Optional numeric; initial guess for \eqn{T_1}. If \code{NULL} or \eqn{\le 0}, a heuristic is used.}
 }

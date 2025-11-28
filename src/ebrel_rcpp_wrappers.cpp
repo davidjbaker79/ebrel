@@ -15,54 +15,83 @@
 #include <cctype>
 #include <numeric>
 #include <cmath>
+#include <vector>
+
+#include <cstdint>
+
+#include <queue>
 
 using namespace Rcpp;
+
+//------------------------------- Helper functions -----------------------------
+
+
+namespace {
+
+inline void ensure(bool ok, const char* msg) {
+  if (!ok) throw std::invalid_argument(msg);
+}
+
+inline size_t n_cells(int dim_x, int dim_y) {
+  return static_cast<size_t>(dim_x) * static_cast<size_t>(dim_y);
+}
+
+}
 
 //------------------------------- Main functions -------------------------------
 
 // [[Rcpp::export]]
-Rcpp::List create_ebrel_class_object_R(std::vector<double> E,
-                                       std::vector<double> C,
-                                       std::vector<double> SD,
-                                       std::vector<int> D,
-                                       std::vector<double> SxH,
-                                       std::vector<double> O,
+Rcpp::List create_ebrel_class_object_R(const std::vector<double>& E,
+                                       const std::vector<double>& C,
+                                       const std::vector<double>& SD,
+                                       const std::vector<int>&    D,
+                                       const std::vector<double>& SxH,
+                                       const std::vector<double>& O,
+                                       const std::vector<int>&    LM,   // from R: 0/1 ints
                                        int dim_x,
                                        int dim_y,
                                        int n_h,
                                        int n_s,
                                        double sentinel = 1e10,
-                                       double sigma = 0.15) {
-  // Convert Rcpp inputs to STL vectors
-  std::vector<double> E_v(E.begin(), E.end());
-  std::vector<double> C_v(C.begin(), C.end());
-  std::vector<double> SD_v(SD.begin(), SD.end());
-  std::vector<int> D_v(D.begin(), D.end());
-  std::vector<double> SxH_v(SxH.begin(), SxH.end());
-  std::vector<double> O_v(O.begin(), O.end());
+                                       double sigma    = 0.15)
+{
+  // LM ints -> uint8_t mask for core code
+  std::vector<uint8_t> LM_u8(LM.begin(), LM.end());
 
   std::vector<double> U_v;
+  std::vector<int> row_first_land, row_last_land, col_first_land, col_last_land;
 
-  // Call core C++ function
-  create_ebrel_class_object(E_v, C_v, SD_v, D_v, SxH_v, O_v,
-                            dim_x, dim_y, n_h, n_s, sentinel, sigma, U_v);
+  create_ebrel_class_object(
+    E, C, SD, D, SxH, O,
+    LM_u8,
+    dim_x, dim_y, n_h, n_s,
+    sentinel, sigma,
+    U_v,
+    row_first_land, row_last_land,
+    col_first_land, col_last_land
+  );
 
-  // Return as R list
-  return List::create(
-    _["E"] = E,
-    _["C"] = C,
-    _["U"] = NumericVector(U_v.begin(), U_v.end()),
-    _["SD"] = SD,
-    _["D"] = D,
-    _["SxH"] = SxH,
-    _["O"] = O,
-    _["dim1"] = dim_x,
-    _["dim2"] = dim_y,
-    _["nh"] = n_h,
-    _["ns"] = n_s,
-    _["sigma"] = sigma
+  return Rcpp::List::create(
+    Rcpp::Named("E")              = E,
+    Rcpp::Named("C")              = C,
+    Rcpp::Named("U")              = Rcpp::NumericVector(U_v.begin(), U_v.end()),
+    Rcpp::Named("SD")             = SD,
+    Rcpp::Named("D")              = D,
+    Rcpp::Named("SxH")            = SxH,
+    Rcpp::Named("O")              = O,
+    Rcpp::Named("LM")             = LM,  // keep the original 0/1 integer vector for R
+    Rcpp::Named("row_first_land") = row_first_land,
+    Rcpp::Named("row_last_land")  = row_last_land,
+    Rcpp::Named("col_first_land") = col_first_land,
+    Rcpp::Named("col_last_land")  = col_last_land,
+    Rcpp::Named("dim1")           = dim_x,
+    Rcpp::Named("dim2")           = dim_y,
+    Rcpp::Named("nh")             = n_h,
+    Rcpp::Named("ns")             = n_s,
+    Rcpp::Named("sigma")          = sigma
   );
 }
+
 
 // [[Rcpp::export]]
 Rcpp::List run_ebrel_R(
@@ -70,8 +99,9 @@ Rcpp::List run_ebrel_R(
     Rcpp::Nullable<Rcpp::NumericVector> X0 = R_NilValue,
     double base_prob_X0     = 0.85,
     double sigma            = 0.05,
-    int max_disp_thres      = 50,
-    int disp_boundary       = 30,
+    int universal_disp_thres = 20,
+    int max_disp_steps       = 10,
+    int roi_cap             = 100,
     double alpha            = 1.0,
     double beta             = 25.0,
     double gamma            = 100.0,
@@ -102,6 +132,10 @@ Rcpp::List run_ebrel_R(
     Rcpp::IntegerVector D   = ebrel_obj["D"];
     Rcpp::NumericVector SxH = ebrel_obj["SxH"];
     Rcpp::NumericVector O   = ebrel_obj["O"];   // O = targets
+    Rcpp::IntegerVector row_first_land_r = ebrel_obj["row_first_land"];
+    Rcpp::IntegerVector row_last_land_r  = ebrel_obj["row_last_land"];
+    Rcpp::IntegerVector col_first_land_r = ebrel_obj["col_first_land"];
+    Rcpp::IntegerVector col_last_land_r  = ebrel_obj["col_last_land"];
 
     int dim_x = Rcpp::as<int>(ebrel_obj["dim1"]);
     int dim_y = Rcpp::as<int>(ebrel_obj["dim2"]);
@@ -111,12 +145,11 @@ Rcpp::List run_ebrel_R(
     // O length should be n_s
     if (O.size() != n_s) Rcpp::stop("`O` length must equal ns.");
 
+    // Create Ebrel input
     RunEBRELInput in;
     in.dim_x = dim_x; in.dim_y = dim_y;
     in.n_h   = n_h;   in.n_s   = n_s;
-
     in.alpha = alpha; in.beta  = beta; in.gamma = gamma;
-
     in.U   = Rcpp::as<std::vector<double>>(U);
     in.C   = Rcpp::as<std::vector<double>>(C);
     in.E   = Rcpp::as<std::vector<double>>(E);
@@ -124,23 +157,30 @@ Rcpp::List run_ebrel_R(
     in.SD  = Rcpp::as<std::vector<double>>(SD);
     in.SxH = Rcpp::as<std::vector<double>>(SxH);
     in.D   = Rcpp::as<std::vector<int>>(D);
-    in.max_disp_thres = max_disp_thres;
-    in.disp_boundary = disp_boundary;
+    in.universal_disp_thres = universal_disp_thres;
+    in.max_disp_steps   = max_disp_steps;
+    in.roi_cap          = roi_cap;
+
+    Rcpp::IntegerVector LM_r = ebrel_obj["LM"];
+    in.LM.assign(LM_r.begin(), LM_r.end());
+
+    in.row_first_land = Rcpp::as<std::vector<int>>(ebrel_obj["row_first_land"]);
+    in.row_last_land  = Rcpp::as<std::vector<int>>(ebrel_obj["row_last_land"]);
+    in.col_first_land = Rcpp::as<std::vector<int>>(ebrel_obj["col_first_land"]);
+    in.col_last_land  = Rcpp::as<std::vector<int>>(ebrel_obj["col_last_land"]);
 
     // X0 - Null (and therefore naive) or user supplied
-    const std::size_t expected_len =
-      static_cast<std::size_t>(dim_x) * static_cast<std::size_t>(dim_y) * static_cast<std::size_t>(n_h);
+    const size_t Hsz = n_cells(dim_x, dim_y) * static_cast<size_t>(n_h);
     if (X0.isNotNull()) {
       Rcpp::NumericVector X0_r = X0.get();
-      if (static_cast<std::size_t>(X0_r.size()) != expected_len) {
+      if (static_cast<std::size_t>(X0_r.size()) != Hsz) {
         Rcpp::stop("`X0` length mismatch: got %d, expected %d",
-                   X0_r.size(), static_cast<int>(expected_len));
+                   X0_r.size(), static_cast<int>(Hsz));
       }
       in.X0 = Rcpp::as<std::vector<double>>(X0_r);
     }
 
     RunEBRELOptions opt;
-    opt.max_disp_thres   = max_disp_thres;
     opt.step_proportion  = step_proportion;
     opt.step_probability = step_probability;
     opt.n_iterations     = n_iterations;
@@ -161,9 +201,10 @@ Rcpp::List run_ebrel_R(
     opt.rng_seed         = seed.isNotNull() ? Rcpp::as<int>(seed.get()) : -1;
     opt.verbose          = verbose;
 
-
+    // Run ebrel optimisation
     RunEBRELResult res = run_ebrel(in, opt);
 
+    // Return
     return Rcpp::List::create(
       Rcpp::Named("X_best")         = Rcpp::NumericVector(res.X_best.begin(), res.X_best.end()),
       Rcpp::Named("H_best")         = res.H_best,
@@ -206,8 +247,9 @@ Rcpp::List estimate_initial_temp_R(
     Rcpp::List ebrel_obj,
     Rcpp::Nullable<Rcpp::NumericVector> X0 = R_NilValue,
     double base_prob_X0 = 0.85,
-    int    max_disp_thres   = 50,
-    int    disp_boundary    = 30,
+    int    universal_disp_thres = 20,
+    int    max_disp_steps    = 10,
+    int    roi_cap           = 100,
     double alpha            = 1.0,
     double beta             = 25.0,
     double gamma            = 100.0,
@@ -232,6 +274,11 @@ Rcpp::List estimate_initial_temp_R(
     Rcpp::IntegerVector D_r   = ebrel_obj["D"];
     Rcpp::NumericVector SxH_r = ebrel_obj["SxH"];
     Rcpp::NumericVector O_r   = ebrel_obj["O"];
+    Rcpp::IntegerVector LM_r = ebrel_obj["LM"];
+    Rcpp::NumericVector row_first_land_r  = ebrel_obj["row_first_land"];
+    Rcpp::NumericVector row_last_land_r  = ebrel_obj["row_last_land"];
+    Rcpp::NumericVector col_first_land_r  = ebrel_obj["col_first_land"];
+    Rcpp::NumericVector col_last_land_r  = ebrel_obj["col_last_land"];
 
     int dim_x = Rcpp::as<int>(ebrel_obj["dim1"]);
     int dim_y = Rcpp::as<int>(ebrel_obj["dim2"]);
@@ -249,44 +296,50 @@ Rcpp::List estimate_initial_temp_R(
     std::vector<double> SxH = Rcpp::as<std::vector<double>>(SxH_r);
     std::vector<double> O   = Rcpp::as<std::vector<double>>(O_r);
 
-    // lengths & rng
-    const std::size_t expected_len =
-      static_cast<std::size_t>(dim_x) * static_cast<std::size_t>(dim_y) * static_cast<std::size_t>(n_h);
-    if (U.size() != expected_len)
-      Rcpp::stop("`U` size mismatch: expected %d, got %d.",
-                 static_cast<int>(expected_len), static_cast<int>(U.size()));
-    if (!(base_prob_X0 >= 0.0 && base_prob_X0 <= 1.0))
-      Rcpp::stop("`base_prob_X0` must be in [0,1].");
+    std::vector<uint8_t> LM;
+    LM.assign(LM_r.begin(), LM_r.end());   // implicit int → uint8_t conversion
+    std::vector<int> row_first_land = Rcpp::as<std::vector<int>>(row_first_land_r);
+    std::vector<int> row_last_land  = Rcpp::as<std::vector<int>>(row_last_land_r);
+    std::vector<int> col_first_land = Rcpp::as<std::vector<int>>(col_first_land_r);
+    std::vector<int> col_last_land  = Rcpp::as<std::vector<int>>(col_last_land_r);
+
+    // ---- X_seed: PROVIDED or GENERATED ----
+    const size_t Hsz = n_cells(dim_x, dim_y) * static_cast<size_t>(n_h);
+
+    // Generate random seed
     int rng_seed = seed.isNotNull() ? Rcpp::as<int>(seed.get()) : -1;
 
-    // X_seed: PROVIDED or GENERATED
+    // Generate or assign
     std::vector<double> X_seed;
     if (X0.isNotNull()) {
+      // Convert provided R vector
       Rcpp::NumericVector Xs = X0.get();
-      if (static_cast<std::size_t>(Xs.size()) != expected_len)
-        Rcpp::stop("`Xseed` length mismatch: got %d, expected %d",
-                   Xs.size(), static_cast<int>(expected_len));
       X_seed = Rcpp::as<std::vector<double>>(Xs);
     } else {
+      // Generate internally if not provided
       X_seed = generate_X0_A(U, n_h, dim_x, dim_y, base_prob_X0, rng_seed);
-      if (X_seed.size() != expected_len)
-        Rcpp::stop("Internal error: generated X_seed has wrong length.");
     }
 
     // initial objective function evaluations and scaling as per run_ebrel function
     const double F1 = compute_F1(X_seed, C, n_h, dim_x, dim_y);
     const double F2 = compute_F2(X_seed, E, n_h, dim_x, dim_y);
-    std::vector<double> G = compute_G(X_seed, E, SD, SxH, D,
-                                      n_h, dim_x, dim_y,
-                                      max_disp_thres, disp_boundary);
-    const double G_sum = std::accumulate(G.begin(), G.end(), 0.0);
+
+    // Use the same G variant as SA so scaling matches the run
+    std::vector<double> G_init;
+    G_init = compute_G(X_seed, E, SD, SxH, D,
+                       n_h, n_s, dim_x, dim_y,
+                       universal_disp_thres, max_disp_steps,
+                       roi_cap, LM, row_first_land, row_last_land,
+                       col_first_land, col_last_land);
+    const double G_sum = std::accumulate(G_init.begin(), G_init.end(), 0.0);
+
     const double eps   = 1e-12;
     const double alpha_scaled = alpha;
     const double beta_scaled  = (std::abs(F2) > eps) ? (beta  * F1 / F2)  : beta;
     const double gamma_scaled = (std::abs(G_sum) > eps) ? (gamma * F1 / G_sum) : gamma;
 
     std::vector<double> W = compute_distance_weights(E, U, n_h, dim_x, dim_y, sigma);
-    if (W.size() != expected_len) Rcpp::stop("W size mismatch after compute_distance_weights");
+    if (W.size() != Hsz) Rcpp::stop("W size mismatch after compute_distance_weights");
 
     // T1: extract scalar from Nullable
     double T1_val = -1.0;
@@ -298,9 +351,12 @@ Rcpp::List estimate_initial_temp_R(
     // IMPORTANT: pass X_seed (std::vector<double>), not X0 (Nullable)
     InitTempResult out = estimate_initial_temperature_benameur_cpp(
       X_seed, W, U, C, E, O, SD, SxH, D,
-      max_disp_thres, disp_boundary,
-      n_h, n_s, dim_x, dim_y,
-      alpha_scaled, beta_scaled, gamma_scaled, base_prob_X0,
+      universal_disp_thres, max_disp_steps, roi_cap,
+      LM,  row_first_land, row_last_land, col_first_land, col_last_land,
+      n_h, n_s,
+      dim_x, dim_y,
+      alpha_scaled, beta_scaled, gamma_scaled,
+      base_prob_X0,
       step_proportion, step_probability,
       num_samples, chi0, p, tol_logchi,
       max_iters, T1_val, max_tries_factor,
@@ -323,3 +379,44 @@ Rcpp::List estimate_initial_temp_R(
     Rcpp::stop("Unknown error in estimate_initial_temp_R");
   }
 }
+
+// ------------------ Thin wrapper: G only ------------------
+// [[Rcpp::export]]
+Rcpp::NumericVector compute_G_R(const Rcpp::NumericVector& X,
+                                      const Rcpp::NumericVector& E,
+                                      const Rcpp::NumericVector& SD,
+                                      const Rcpp::NumericVector& SxH,
+                                      const Rcpp::IntegerVector& D,
+                                      int n_h, int n_s, int dim_x, int dim_y,
+                                      int universal_disp_thres, int max_disp_steps,
+                                      int roi_cap,
+                                      const Rcpp::IntegerVector& LM,
+                                      const Rcpp::IntegerVector& row_first_land,
+                                      const Rcpp::IntegerVector& row_last_land,
+                                      const Rcpp::IntegerVector& col_first_land,
+                                      const Rcpp::IntegerVector& col_last_land)
+{
+  std::vector<double> Xv(X.begin(), X.end());
+  std::vector<double> Ev(E.begin(), E.end());
+  std::vector<double> SDv(SD.begin(), SD.end());
+  std::vector<double> SxHv(SxH.begin(), SxH.end());
+  std::vector<int>    Dv(D.begin(), D.end());
+  std::vector<uint8_t> LMv(LM.begin(), LM.end());  // implicit int -> uint8_t
+
+  // Land index vectors
+  std::vector<int> row_first_land_v(row_first_land.begin(), row_first_land.end());
+  std::vector<int> row_last_land_v (row_last_land.begin(),  row_last_land.end());
+  std::vector<int> col_first_land_v(col_first_land.begin(), col_first_land.end());
+  std::vector<int> col_last_land_v (col_last_land.begin(),  col_last_land.end());
+
+  std::vector<double> G = compute_G(Xv, Ev, SDv, SxHv, Dv,
+                                 n_h, n_s, dim_x, dim_y,
+                                 universal_disp_thres, max_disp_steps,
+                                 roi_cap, LMv,
+                                 row_first_land_v, row_last_land_v,
+                                 col_first_land_v, col_last_land_v);
+  return Rcpp::NumericVector(G.begin(), G.end());
+
+}
+
+

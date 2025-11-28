@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <stdexcept>  // std::runtime_error, std::invalid_argument
+#include <string>     // std::to_strings
 
 //-------------------------- Local helper functions ----------------------------
 namespace {
@@ -128,8 +130,7 @@ double compute_F2(const std::vector<double>& X,
 //   return alpha * f1 + beta * f2;
 // }
 
-// H(X) = alpha*f1 + beta*f2 + gamma*sum_i
-// - also returns all the other objective function statistics
+// ---- Compute H
 HResult compute_H(const std::vector<double>& X,
                   const std::vector<double>& C,
                   const std::vector<double>& E,
@@ -140,29 +141,71 @@ HResult compute_H(const std::vector<double>& X,
                   double alpha_scaled,
                   double beta_scaled,
                   double gamma_scaled,
-                  int n_h, int dim_x, int dim_y,
-                  int max_disp_thres,
-                  int disp_boundary) {
+                  int n_h,
+                  int n_s,
+                  int dim_x,
+                  int dim_y,
+                  int universal_disp_thres,
+                  int max_disp_steps,
+                  int roi_cap,
+                  const std::vector<uint8_t>& LM,
+                  const std::vector<int>& row_first_land,
+                  const std::vector<int>& row_last_land,
+                  const std::vector<int>& col_first_land,
+                  const std::vector<int>& col_last_land)
+{
+
+  // ---- Dimensions: cells ----
+  const std::size_t cells = n_cells(dim_x, dim_y);
+
+  // ---- F1 and F2 -----
   const double f1 = compute_F1(X, C, n_h, dim_x, dim_y);
   const double f2 = compute_F2(X, E, n_h, dim_x, dim_y);
 
-  // G computed using new dispersal BFS model
-  std::vector<double> G = compute_G(X, E, SD, SxH, D,
-                                    n_h, dim_x, dim_y,
-                                    max_disp_thres, disp_boundary);
+  // ---- Compute G ----
+  std::vector<double> G;
+  G = compute_G(X, E, SD, SxH, D,
+                n_h, n_s, dim_x, dim_y,
+                universal_disp_thres, max_disp_steps, roi_cap,
+                LM, row_first_land, row_last_land,
+                col_first_land, col_last_land);
 
-  const int n_species = static_cast<int>(G.size());
-  const std::size_t cells = n_cells(dim_x, dim_y);
+  // ---- Shortfall per species relative to target o_i * m_i ----
+  std::vector<double> g(n_s, 0.0);
 
-  std::vector<double> g(n_species, 0.0);  // shortfall per species
-  for (int i = 0; i < n_species; ++i) {
-    int m_i = 0;
-    const std::size_t base = static_cast<std::size_t>(i) * cells;
-    for (std::size_t k = 0; k < cells; ++k) {
-      if (SD[base + k] == 1.0) ++m_i;
+  // ---- Create a habitat mask for species so that cells that are
+  // converted and no longer suitable are discounted.
+  for (int sp = 0; sp < n_s; ++sp) {
+
+    // Per-species suitability flags ----
+    std::vector<uint8_t> suitable_h_flag(n_h, 0u);
+    for (int h = 0; h < n_h; ++h) {
+      const std::size_t base_h = static_cast<std::size_t>(h) * static_cast<std::size_t>(n_s);
+      suitable_h_flag[h] = (SxH[base_h + static_cast<std::size_t>(sp)] > 0.0) ? 1u : 0u;
     }
-    const double target = O[static_cast<std::size_t>(i)] * static_cast<double>(m_i);
-    g[static_cast<std::size_t>(i)] = std::max(0.0, target - G[static_cast<std::size_t>(i)]);
+
+    // X mask by species ----
+    std::vector<double> sp_sd_x_mask(static_cast<std::size_t>(cells), 1u);
+    for (int h = 0; h < n_h; ++h) {
+      for (std::size_t k = 0; k < cells; ++k) {
+        const std::size_t base_h = static_cast<std::size_t>(h) * static_cast<std::size_t>(cells);
+        if (suitable_h_flag[h] == 0.0 && X[base_h + k] > 0.0 ) {
+          sp_sd_x_mask[k] = 0u;
+        }
+      }
+    }
+
+    // m_i: initial occupied tiles for species i (from SD)
+    int m_i = 0;
+    const std::size_t base_s = static_cast<std::size_t>(sp) * cells;
+    for (std::size_t k = 0; k < cells; ++k) {
+      if (SD[base_s + k] == 1.0 && sp_sd_x_mask[k] == 1.0) ++m_i;
+    }
+
+    const double target = O[static_cast<std::size_t>(sp)] * static_cast<double>(m_i);
+    const double Gi = G[static_cast<std::size_t>(sp)];
+    g[static_cast<std::size_t>(sp)] = std::max(0.0, target - Gi);
+
   }
 
   const double gx_val = std::accumulate(g.begin(), g.end(), 0.0);
@@ -171,3 +214,4 @@ HResult compute_H(const std::vector<double>& X,
 
   return { H_val, Fx_val, gx_val, f1, f2, g };
 }
+

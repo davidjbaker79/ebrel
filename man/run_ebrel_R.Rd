@@ -7,8 +7,9 @@
 run_ebrel_R(
   ebrel_obj,
   X0 = NULL,
-  max_disp_thres = 50,
-  disp_boundary = 30,
+  universal_disp_thres = 50,
+  max_disp_steps = 30,
+  roi_cap = 200,
   alpha = 1,
   beta = 25,
   gamma = 100,
@@ -38,9 +39,11 @@ run_ebrel_R(
 
 \item{X0}{Optional initial configuration.}
 
-\item{max_disp_thres}{Numeric threshold after which universal dispersal is assumed.}
+\item{universal_disp_thres}{Numeric; distance (in cells) after which universal dispersal is assumed.}
 
-\item{disp_boundary}{Numeric factor setting the dispersal limit as \code{D[sp] * disp_boundary}.}
+\item{max_disp_steps}{Numeric; dispersal limit factor (number of consecutive hops) applied as \code{D[sp] * max_disp_steps}.}
+
+\item{roi_cap}{Numeric; capping the size of the region of interested (roi) to prevent ballooning.}
 
 \item{alpha}{Numeric weight for target attainment.}
 

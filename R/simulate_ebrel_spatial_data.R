@@ -1,61 +1,129 @@
-#' Simulate Spatial Habitat and Species Distribution Data
+#' Simulate spatial habitat and species distribution data for EBREL
 #'
-#' Generates virtual habitat configurations, conversion costs, and species distributions
-#' for testing spatial conservation and species distribution models.
-#' The simulation supports scalable grid dimensions, flexible numbers of habitats and species,
-#' and realistic species dispersal distances drawn from a gamma distribution. It also supports
-#' generating a high proportion of rare (low-prevalence) species.
+#' Generates virtual habitat configurations, land–sea masks, conversion costs,
+#' and species distributions for testing spatial conservation and species
+#' distribution models. The simulation supports scalable grid dimensions,
+#' flexible numbers of habitats and species, grid-scaled species dispersal
+#' distances drawn from a Gamma distribution, and a tunable proportion of
+#' rare (low-prevalence) species.
 #'
-#' @param dim_x Integer. Number of rows along x/easting/longitude in the spatial grid.
-#' @param dim_y Integer. Number of columns along y/northing/latitude in the spatial grid.
-#' @param n_h Integer. Number of distinct habitat types.
+#' Habitat is generated as autocorrelated raster layers, optionally overlaid
+#' with a simple land–sea mask. Species are assigned to one or more habitat
+#' types, seeded into suitable cells, and their ranges are grown using a
+#' breadth-first search constrained by habitat and species-specific dispersal
+#' distances. Dispersal distances are drawn from a Gamma distribution whose
+#' mean and variance are scaled to the grid dimension \code{dim_x} and
+#' controlled by a discrete long-tail class (see \code{disp_longtail} and
+#' \code{.map_longtail_to_gamma()}).
+#'
+#' @param dim_x Integer. Number of rows in the spatial grid (e.g. x/easting).
+#' @param dim_y Integer. Number of columns in the spatial grid (e.g. y/northing).
+#' @param n_h Integer. Number of distinct habitat types (the last type is treated
+#'   as non-selectable/urban in the cost construction).
 #' @param n_s Integer. Number of species.
-#' @param disp_max Integer. maximum allowable dispersal distances for species.
-#' @param disp_longtail Numeric (0–1). Controls the proportion of long-distance dispersers. Low values generate mostly short dispersers; high values generate more long-tailed (dispersive) species. Default is 0.5.
-#' @param rarity_bias Numeric (≥0). Controls how many species are rare (low-prevalence). Set to 0 for equal prevalence across species; higher values (e.g. 1–3) produce more rare species. Default is 1.
-#' @param fixed_O Optinal numeric (>0): If set, applies the same **occupancy target** (proportional increase in occupancy) to all species; else randomised.
-#' @param convert_to_cpp_format logical: convert of c++ format or else return data in R formats.
-#' @param seed Optional integer. If provided, results are reproducible; Default NULL.
+#' @param disp_max Integer. Maximum allowable dispersal distance (in cells) for
+#'   species. Gamma-drawn distances are truncated at this value.
+#' @param disp_longtail Integer (0–3). Dispersal long-tail class passed to
+#'   \code{.map_longtail_to_gamma()}. Controls the typical mean and spread of
+#'   species' dispersal distances relative to grid size:
+#'   \itemize{
+#'     \item \code{0}: very short-tailed dispersal
+#'     \item \code{1}: short-tailed dispersal
+#'     \item \code{2}: intermediate dispersal
+#'     \item \code{3}: long-tailed (more long-distance dispersers)
+#'   }
+#'   Larger values yield species with, on average, longer and more variable
+#'   dispersal distances. (See \code{.map_longtail_to_gamma()} for exact mapping.)
+#' @param rarity_bias Numeric (≥0). Controls how many species are rare
+#'   (low-prevalence). A value of \code{0} produces more equal prevalence across
+#'   species; higher values (e.g. 1–3) generate more strongly right-skewed
+#'   prevalence distributions, with many rare species. Implemented via a
+#'   Beta-distributed rarity weight.
+#' @param fixed_O Optional numeric (>0). If supplied, applies the same occupancy
+#'   target (proportional increase in occupancy) to all species. If \code{NULL},
+#'   species-specific occupancy targets are drawn at random.
+#' @param maskLandArea Logical. If \code{TRUE}, habitat and species layers are
+#'   masked to the land area defined by the internally generated land mask.
+#'   If \code{FALSE}, the land mask is still generated but returned as a separate
+#'   layer and not used to mask habitat or species.
+#' @param prop_sea Numeric in \eqn{(0, 1)}. Proportion of the grid height that
+#'   can be occupied by sea when generating the land–sea mask. Passed to the
+#'   internal coastline/land-mask generator.
+#' @param convert_to_cpp_format Logical. If \code{TRUE} (default), returns data
+#'   converted into the vector/matrix formats required by the EBREL C++ code via
+#'   \code{prepare_ebrel_r_to_cpp()}. If \code{FALSE}, returns higher-level R
+#'   objects (mostly \code{SpatRaster}s and matrices) suitable for inspection
+#'   and further manipulation in R.
+#' @param seed Optional integer. If provided, used to seed the random number
+#'   generator to make results reproducible.
 #'
 #' @import terra
 #' @import gstat
 #'
-#' @return A list containing:
+#' @return
+#' If \code{convert_to_cpp_format = FALSE}, returns a list:
 #' \describe{
-#'   \item{\code{dim_x}}{Numeric \code{(dim_x)}.}
-#'   \item{\code{dim_y}}{Numeric \code{(dim_y)}.}
-#'   \item{\code{n_h}}{Number of habitats.}
+#'   \item{\code{dim_x}}{Number of rows.}
+#'   \item{\code{dim_y}}{Number of columns.}
+#'   \item{\code{n_h}}{Number of habitat types.}
 #'   \item{\code{n_s}}{Number of species.}
-#'   \item{\code{E}}{3D array \code{[dim_x, dim_y, n_h]} of binary habitat layers.}
-#'   \item{\code{C}}{3D array \code{[dim_x, dim_y, n_h]} of habitat conversion costs.}
-#'   \item{\code{U}}{3D array \code{[dim_x, dim_y, n_h]} indicating unavailable cells (1 = unavailable).}
-#'   \item{\code{Y}}{3D array \code{[dim_x, dim_y, n_h]} of habitat configurations after accounting for availability.}
-#'   \item{\code{SD}}{3D array \code{[dim_x, dim_y, n_s]} of binary species presence/absence values.}
-#'   \item{\code{pd}}{3D array \code{[dim_x, dim_y, n_s]} of species occurrence probabilities.}
-#'   \item{\code{S}}{Matrix \code{[n_h, n_s]} indicating which species use which habitats.}
-#'   \item{\code{Disp}}{Numeric vector of species dispersal distances.}
-#'   \item{\code{O}}{Numeric vector of species occupancy targets.}
-#'   \item{\code{Alpha}}{Vector of penalty multipliers.}
-#'   \item{\code{sigma}}{Scalar penalty weight based on mean dispersal distance.}
-#'   \item{\code{seed}}{The seed used for random number generation.}
+#'   \item{\code{E}}{\code{SpatRaster} with \code{n_h} layers of binary habitat
+#'     (0/1) after handling NAs/unavailable cells.}
+#'   \item{\code{C}}{\code{SpatRaster} with \code{n_h} layers of habitat conversion
+#'     costs (large values for unavailable/urban).}
+#'   \item{\code{SD}}{\code{SpatRaster} with \code{n_s} layers of binary species
+#'     presence/absence.}
+#'   \item{\code{SxH}}{Matrix \code{[n_s, n_h]} indicating which species use which
+#'     habitats (1 = used, 0 = not used).}
+#'   \item{\code{D}}{Numeric vector of length \code{n_s} giving species dispersal
+#'     distances (in cells) after truncation by \code{disp_max}.}
+#'   \item{\code{O}}{Numeric vector of length \code{n_s} of species occupancy
+#'     targets.}
+#'   \item{\code{sigma}}{Scalar penalty weight based on the mean dispersal distance
+#'     (\code{1 / mean(D)}).}
+#'   \item{\code{LM}}{\code{SpatRaster} land mask (1 = land, 0 = non-land/sea).}
 #' }
 #'
+#' If \code{convert_to_cpp_format = TRUE}, returns the list produced by
+#' \code{prepare_ebrel_r_to_cpp()}, containing the same information restructured
+#' into simple vectors/matrices suitable for passing directly to the EBREL C++
+#' optimisation routines (see \code{prepare_ebrel_r_to_cpp()} for details).
+#'
 #' @examples
-#' sim <- simulate_ebrel_spatial_data(dim_x = 50, dim_y = 50, n_h = 3, n_s = 15, rarity_bias = 2)
-#' hist(sim$Disp)  # Dispersal distances
-#' image(sim$E[,,1])  # Plot first habitat layer
-#' mean(colSums(sim$SD, dims = 2)) / (50 * 50)  # Average prevalence per species
+#' \dontrun{
+#' # Basic example with 3 habitats and 15 species on a 50x50 grid
+#' sim <- simulate_ebrel_spatial_data(
+#'   dim_x = 50, dim_y = 50,
+#'   n_h = 3, n_s = 15,
+#'   disp_max = 20,
+#'   rarity_bias = 2,
+#'   convert_to_cpp_format = FALSE,
+#'   seed = 123
+#' )
+#'
+#' # Dispersal distances
+#' hist(sim$D, main = "Species dispersal distances")
+#'
+#' # Plot first habitat layer
+#' plot(sim$E[[1]], main = "Habitat 1")
+#'
+#' # Average prevalence per species
+#' avg_prev <- mean(global(sim$SD, fun = "sum", na.rm = TRUE)) / (50 * 50)
+#' avg_prev
+#' }
 #'
 #' @export
 simulate_ebrel_spatial_data <- function(
     dim_x,
     dim_y,
-    n_h,
+    n_h, # Number of selectable opportunity habitat types is n_h - 1
     n_s,
     disp_max,
     disp_longtail = 0.5,
     rarity_bias = 1,
     fixed_O = NULL,
+    maskLandArea = FALSE,
+    prop_sea = 0.2,
     convert_to_cpp_format = TRUE,
     seed = NULL) {
   # --- Set seed for reproducibility
@@ -66,7 +134,7 @@ simulate_ebrel_spatial_data <- function(
   # --- Number of cells
   n_cells <- dim_x * dim_y
 
-  gamma_params <- .map_longtail_to_gamma(disp_longtail)
+  gamma_params <- .map_longtail_to_gamma(disp_longtail, dim_x)
   long_disp_shape <- gamma_params$shape
   long_disp_scale <- gamma_params$scale
 
@@ -75,8 +143,19 @@ simulate_ebrel_spatial_data <- function(
     dim_x = dim_x,
     dim_y = dim_y,
     n_h = n_h,
-    unavail_hab_prop = 0.25
+    unavail_hab_prop = 0.2,
+    prop_sea = prop_sea
   )
+
+  # --- Mask land or reset landMask
+  landMask <- hab_rast$LM
+  if (maskLandArea) {
+    hab_rast[[2]] <- mask(hab_rast[[2]], landMask)
+    hab_rast[[3]] <- mask(hab_rast[[3]], landMask)
+  } else {
+    # Blank out landMask if no masking occurred
+    landMask <- setValues(landMask, NA)
+  }
 
   # --- Generate rarity weights using beta distribution
   rarity_weights <- sort(rbeta(n_s, shape1 = 1, shape2 = 3 * rarity_bias + 0.1), decreasing = TRUE)
@@ -116,7 +195,7 @@ simulate_ebrel_spatial_data <- function(
 
       # draw how many habitats and which ones
       k <- sample.int(k_max, 1, prob = hab_probs)
-      hs <- sample.int(n_h, k, replace = FALSE)
+      hs <- sample.int((n_h), k, replace = FALSE)
 
       # cells with any of the chosen habitats
       hs_max <- terra::app(hab_rast$E[[hs]], "max")
@@ -143,7 +222,6 @@ simulate_ebrel_spatial_data <- function(
       # else retry with different hs
     }
   }
-
   SD_rast <- do.call(c, SD_rast)
 
   # --- Targets
@@ -166,7 +244,7 @@ simulate_ebrel_spatial_data <- function(
   geo_C_ramp <- setValues(hab_rast$HO[[1]], rep(x_ramp_vec, dim_x))
 
   # - Assign costs
-  C_rast <- lapply(seq_len(n_h), function(i) {
+  C_rast <- lapply(seq_len(n_h-1), function(i) {
     C_i <- hab_rast$HO[[i]] # Get opportunity
     BC_i <- hab_base_cost[[i]] # Get base cost
     C_i <- ifel(C_i == 1, BC_i, 0)
@@ -175,12 +253,17 @@ simulate_ebrel_spatial_data <- function(
     C_i
   })
   C_rast <- do.call(c, C_rast)
-  names(C_rast) <- paste("C", 1:n_h)
+  # Add sentinel cost for urban (i.e. unavailable everywhere)
+  C_urb <- setValues(C_rast[[1]], 1e10)
+  C_rast <- c(C_rast, C_urb)
+  # Name
+  names(C_rast) <- paste0("C", 1:(n_h))
 
   # --- Sort out NAs
   E_rast <- ifel(is.na(hab_rast$E), 0, hab_rast$E)
   SD_rast <- ifel(is.na(SD_rast), 0, SD_rast)
   C_rast <- ifel(is.na(C_rast), 1e10, C_rast)
+  LM_rast <- ifel(is.na(landMask), 0, landMask)
 
   # --- Simulated data in R formats
   sim_r <- list(
@@ -194,7 +277,8 @@ simulate_ebrel_spatial_data <- function(
     SxH = SxH,
     D = D,
     O = O,
-    sigma = sigma
+    sigma = sigma,
+    LM = LM_rast
   )
 
   # --- Return
@@ -208,7 +292,8 @@ simulate_ebrel_spatial_data <- function(
         D_vec = D,
         SxH_mat = SxH,
         O_vec = O,
-        sigma = sigma
+        sigma = sigma,
+        LM_rast = LM_rast
       )
     return(sim_cpp)
   } else {
@@ -224,7 +309,8 @@ simulate_ebrel_spatial_data <- function(
       SxH = SxH,
       D = D,
       O = O,
-      sigma = sigma
+      sigma = sigma,
+      LM = LM_rast
     )
     return(sim_r)
   }
@@ -275,7 +361,7 @@ simulate_ebrel_spatial_data <- function(
 #' @importFrom terra rast values app setValues which.max ifel global minmax ncell names
 #' @export
 .generate_habitat_rast <- function(dim_x = 50, dim_y = 50, n_h = 4,
-                                   unavail_hab_prop = 0.25) {
+                                  unavail_hab_prop = 0.1, prop_sea = 0.2) {
 
   # --- Create autocorrelated surface
   xy <- expand.grid(x = 1:dim_x, y = 1:dim_y)
@@ -287,28 +373,33 @@ simulate_ebrel_spatial_data <- function(
   urban_sim <- predict(zDummy, newdata = xy, nsim = 1, debug.level = 0)
   urban <- .rescale01(rast(urban_sim, type = "xyz"))
   urban_q <- quantile(values(urban), prob = unavail_hab_prop)
-  urban_binary <- ifel(urban < urban_q, 1, 0)
+  urban_binary <- ifel(urban < urban_q, 1, NA)
 
   # -- Simulate surfaces for "habitat"
-  habitat_sim <- predict(zDummy, newdata = xy, nsim = n_h, debug.level = 0)
+  habitat_sim <- predict(zDummy, newdata = xy, nsim = (n_h-1), debug.level = 0)
   habitat <- rast(habitat_sim, type = "xyz")
-  for (x in seq_len(n_h)) {
+  for (x in seq_len(n_h-1)) {
     habitat[[x]] <- .rescale01(habitat[[x]])
   }
   habitat <- ifel(urban_binary == 1, NA, habitat)
 
   # -- Establish habitat opportunities (HO)
   HO <- habitat
-  for (h in 1:(n_h)) {
+  for (h in 1:(n_h-1)) {
     qX <- quantile(values(HO[[h]]), prob = pmin(rnorm(1, 0.90,0.01), 0.99), na.rm = TRUE
     ) # areas mod to small
     HO[[h]] <- ifel(HO[[h]] < qX, 0, 1) # also mask urban
   }
 
+  # - Add zeroed H0 for urban (i.e. no opportunities)
+  HO <- c(HO, setValues(HO[[1]],0))
+
   # -- Establish existing habitat
   # - One-hot encode E (i.e. only one habitat per tile)
   habitat_max <- which.max(habitat)
-  E_hab <- rast(lapply(seq_len(n_h), function(k) 1 * (habitat_max == k)))
+  E_hab <- rast(lapply(seq_len(n_h-1), function(k) 1 * (habitat_max == k)))
+  E_hab <- mask(E_hab, urban_binary, inverse = TRUE)
+  E_hab[is.na(E_hab)] <- 0
 
   # - Convert HO to existing habitat by converting land
   layers_zero <- 0
@@ -330,17 +421,122 @@ simulate_ebrel_spatial_data <- function(
       layers_zero <- 1
   }
 
+  # - Add back in urban (no opportunity but can be existing)
+  E <- c(E, urban_binary)
+  E[is.na(E)] <- 0
+
   # - Set names
-  names(habitat) <- paste0("hp", 1:n_h)
+  names(habitat) <- paste0("hp", 1:(n_h-1))
   names(E) <- paste0("E", 1:n_h)
   names(HO) <- paste0("HO", 1:n_h)
+
+  # - Make sea mask
+  LM <- setValues(habitat[[1]], 0)
+  LM <- make_land_mask(LM, prop_sea = prop_sea, smooth_window = 5)
 
   list(
     HP = habitat,
     E = E,
-    HO = HO
+    HO = HO,
+    LM = LM
   )
 }
+
+#' Generate a simple land–sea mask with a smoothed coastline
+#'
+#' Creates a single-layer \code{SpatRaster} mask distinguishing land from sea,
+#' based on a template raster. The coastline is generated by drawing a random
+#' shoreline height (in rows from the bottom of the raster) per column,
+#' smoothing it with a moving-average filter, and then filling cells below the
+#' coastline as sea.
+#'
+#' The mask is aligned to the geometry (extent, resolution, CRS) of the input
+#' raster \code{r}. Cell values are set to \code{1} on land and \code{NA} over
+#' sea.
+#'
+#' @param r A \code{terra::SpatRaster} object providing the target geometry
+#'   (extent, resolution, projection, and dimensions) for the mask.
+#' @param prop_sea Numeric in \eqn{(0, 1]}. Approximate maximum proportion of
+#'   the raster height (from the bottom) that can be occupied by sea. This
+#'   determines the upper bound on the randomly drawn coastline heights.
+#' @param smooth_window Integer \eqn{\ge 1}. Width of the moving-average filter
+#'   used to smooth the randomly drawn coastline heights across columns. Larger
+#'   values produce smoother coastlines.
+#' @param seed Optional integer. If provided, passed to \code{set.seed()} to
+#'   make the coastline generation reproducible.
+#'
+#' @return A single-layer \code{terra::SpatRaster} with the same geometry as
+#'   \code{r}, named \code{"land"}, where:
+#'   \itemize{
+#'     \item \code{1} indicates land.
+#'     \item \code{NA} indicates sea.
+#'   }
+#'
+#' @details
+#' Let \eqn{n_r} and \eqn{n_c} be the number of rows and columns in \code{r}.
+#' The function:
+#' \enumerate{
+#'   \item Computes \code{max_sea_rows = round(nr * prop_sea)}, the maximum
+#'     number of rows from the bottom that may be sea.
+#'   \item Draws a random coastline height (in rows from the bottom) for each
+#'     column, uniformly between \code{1} and \code{max_sea_rows}.
+#'   \item Smooths these heights across columns using a moving-average filter
+#'     of width \code{smooth_window}.
+#'   \item For each column, marks all cells below the smoothed coastline as
+#'     sea (\code{NA}) and the remaining cells as land (\code{1}).
+#' }
+#'
+#' @examples
+#' \dontrun{
+#' library(terra)
+#'
+#' # Example template raster (e.g. 100 x 100 grid)
+#' r <- rast(nrows = 100, ncols = 100, xmin = 0, xmax = 1, ymin = 0, ymax = 1)
+#'
+#' # Generate a land–sea mask with ~30% sea at the bottom and a smooth coastline
+#' land_mask <- make_land_mask(r, prop_sea = 0.3, smooth_window = 7, seed = 42)
+#'
+#' plot(land_mask)
+#' }
+#'
+#' @keywords internal
+#' @noRd
+make_land_mask <- function(r, prop_sea = 0.3, smooth_window = 5, seed = NULL) {
+  if (!is.null(seed)) set.seed(seed)
+
+  nr <- nrow(r)
+  nc <- ncol(r)
+
+  # Target maximum sea height (in rows from the bottom)
+  max_sea_rows <- max(1, round(nr * prop_sea))
+
+  # Random coastline height per column (from 1 to max_sea_rows)
+  coast_raw <- sample(1:max_sea_rows, nc, replace = TRUE)
+
+  # Smooth coastline
+  k <- rep(1 / smooth_window, smooth_window)
+  coast_smooth <- stats::filter(coast_raw, k, sides = 2)
+  # replace NAs at edges with original values
+  coast_smooth[is.na(coast_smooth)] <- coast_raw[is.na(coast_smooth)]
+  coast <- pmax(1, pmin(max_sea_rows, round(coast_smooth)))
+
+  # Build a matrix where 1 = land, NA = sea
+  mat <- matrix(1, nrow = nr, ncol = nc)
+  for (j in seq_len(nc)) {
+    if (coast[j] > 0) {
+      bottom_rows <- (nr - coast[j] + 1):nr
+      mat[j, bottom_rows] <- NA
+    }
+  }
+
+  # Create SpatRaster with same geometry as input
+  land_r <- r
+  values(land_r) <- as.vector(mat)
+  names(land_r) <- "land"
+
+  return(land_r)
+}
+
 
 #' Buffer binary cells on a raster
 #'
@@ -494,40 +690,73 @@ simulate_ebrel_spatial_data <- function(
   out
 }
 
-#' Map a long-tail control to Gamma parameters
+#' Map a long-tail dispersal class to Gamma parameters (grid-scaled)
 #'
-#' Converts a unit-interval "long-tail" control into parameters of a
+#' Converts a discrete long-tail class into parameters of a
 #' \eqn{\mathrm{Gamma}(\text{shape}, \text{scale})} distribution used to draw
-#' dispersal distances. Larger \code{longtail} yields smaller shape (heavier
-#' tail) and larger scale.
+#' dispersal distances. The mapping is defined in terms of the maximum possible
+#' distance on the grid (\code{max_dist}), allowing dispersal distances to scale
+#' automatically with grid size (e.g., 25×25 vs 200×200).
 #'
-#' Mapping:
-#' \deqn{\text{shape} = \text{base\_shape} \cdot (1 - \text{longtail}) + 0.5}
-#' \deqn{\text{scale} = \text{base\_scale} \cdot (1 + 4 \cdot \text{longtail})}
+#' Each \code{longtail} class corresponds to a pair of fractions
+#' (\code{mean_frac}, \code{sd_frac}) that determine the mean and standard
+#' deviation of the Gamma distribution as:
+#' \deqn{\mu = \text{mean\_frac} \times \text{max\_dist}}
+#' \deqn{\sigma = \text{sd\_frac} \times \text{max\_dist}}
 #'
-#' @param longtail Numeric in \[0, 1]; 0 = short-tailed, 1 = long-tailed.
-#' @param base_shape Positive numeric; baseline shape when \code{longtail = 0}.
-#' @param base_scale Positive numeric; baseline scale when \code{longtail = 0}.
+#' These are then converted to Gamma parameters via:
+#' \deqn{\text{shape} = (\mu^2) / \sigma^2}
+#' \deqn{\text{scale} = \sigma^2 / \mu}
 #'
-#' @return A list with two elements:
+#' Larger \code{longtail} values correspond to increasingly long-tailed
+#' dispersal distributions (larger mean fraction, larger SD fraction).
+#'
+#' @param longtail Integer (0–3). Dispersal class where:
+#'   \itemize{
+#'     \item \code{0}: very short-tailed (\code{mean_frac = 0.05}, \code{sd_frac = 0.10})
+#'     \item \code{1}: short-tailed    (\code{mean_frac = 0.15}, \code{sd_frac = 0.15})
+#'     \item \code{2}: intermediate    (\code{mean_frac = 0.25}, \code{sd_frac = 0.25})
+#'     \item \code{3}: long-tailed     (\code{mean_frac = 0.35}, \code{sd_frac = 0.35})
+#'   }
+#'
+#' @param max_dist Numeric. The maximum possible cell-to-cell distance on the grid
+#'   (typically the grid diagonal, e.g., \code{sqrt(nx^2 + ny^2)}).
+#'
+#' @return A list with:
 #' \itemize{
-#'   \item \code{shape}: gamma shape parameter.
-#'   \item \code{scale}: gamma scale parameter.
+#'   \item \code{shape}: Gamma shape parameter.
+#'   \item \code{scale}: Gamma scale parameter.
 #' }
 #'
 #' @examples
-#' map_longtail_to_gamma(0)   # near base_shape + 0.5, base_scale
-#' map_longtail_to_gamma(0.5) # intermediate shape/scale
-#' map_longtail_to_gamma(1)   # shape ~ 0.5, scale ~ 5 * base_scale
+#' # Suppose a 100x100 grid:
+#' max_dist <- sqrt(100^2 + 100^2)
+#'
+#' .map_longtail_to_gamma(0, max_dist)
+#' .map_longtail_to_gamma(1, max_dist)
+#' .map_longtail_to_gamma(3, max_dist)
 #'
 #' @keywords internal
 #' @noRd
-.map_longtail_to_gamma <- function(longtail, base_shape = 5, base_scale = 1) {
-  inv <- 1 - longtail
-  shape <- base_shape * inv + 0.5
-  scale <- base_scale * (1 + 4 * longtail)
+.map_longtail_to_gamma <- function(longtail, max_dist) {
+  # choose relative behaviour by 'longtail'
+  base <- switch(as.character(longtail),
+                 "0" = list(mean_frac = 0.05, sd_frac = 0.1),
+                 "1" = list(mean_frac = 0.15, sd_frac = 0.15),
+                 "2" = list(mean_frac = 0.25, sd_frac = 0.25),
+                 "3" = list(mean_frac = 0.35, sd_frac = 0.35),
+                 stop("Unknown longtail value")
+  )
+
+  mean_D <- base$mean_frac * max_dist
+  sd_D   <- base$sd_frac   * max_dist
+
+  shape <- (mean_D^2) / (sd_D^2)
+  scale <- (sd_D^2) / mean_D
+
   list(shape = shape, scale = scale)
 }
+
 
 #' Sample eligible cell indices from a mask raster
 #'

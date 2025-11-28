@@ -11,6 +11,7 @@ create_ebrel_class_object_R(
   D,
   SxH,
   O,
+  LM,
   dim_x,
   dim_y,
   n_h,
@@ -31,6 +32,8 @@ create_ebrel_class_object_R(
 \item{SxH}{Numeric vector of length \code{n_s * n_h}; species–habitat association strengths.}
 
 \item{O}{Numeric vector of length \code{n_s}; species/feature targets (e.g., proportional increase in occupancy).}
+
+\item{LM}{Numeric vector of length \code{n_cells}; encodes land mask.}
 
 \item{dim_x}{Integer; number of grid cells along the x/longitude/easting dimension.}
 
@@ -65,7 +68,7 @@ Cells with no data/unavailable should be marked with \code{sentinel}.
 \examples{
 \dontrun{
 n_x <- 100; n_y <- 80
-obj <- create_ebrel_class_object_R(E, C, SD, D, SxH, O, n_x, n_y, 5, 12)
+obj <- create_ebrel_class_object_R(E, C, P, SD, D, SxH, O, n_x, n_y, 5, 12)
 }
 }
 \seealso{

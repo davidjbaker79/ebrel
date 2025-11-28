@@ -96,6 +96,7 @@ ebrel_sim_data <- simulate_ebrel_spatial_data(
   disp_longtail = disp_longtail,
   rarity_bias = rarity_bias,
   fixed_O = objective_targets,
+  fract_landcover = TRUE,
   convert_to_cpp_format = FALSE,
   seed = 1234
 )
@@ -151,6 +152,7 @@ If you created data with `simulate_ebrel_spatial_data(..., convert_to_cpp_format
 ebrel_cpp_in <- prepare_ebrel_r_to_cpp(
   E_rast  = ebrel_sim_data$E,     # SpatRaster, n_h layers
   C_rast  = ebrel_sim_data$C,     # SpatRaster, n_h layers (sentinel = very large => unavailable)
+  P_rast  = ebrel_sim_data$P,     # SpatRaster, n_h layers
   SD_rast = ebrel_sim_data$SD,    # SpatRaster, n_s layers
   D_vec   = ebrel_sim_data$D,     # length n_s
   SxH_mat = ebrel_sim_data$SxH,   # n_s x n_h

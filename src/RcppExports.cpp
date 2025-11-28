@@ -11,30 +11,31 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // create_ebrel_class_object_R
-Rcpp::List create_ebrel_class_object_R(std::vector<double> E, std::vector<double> C, std::vector<double> SD, std::vector<int> D, std::vector<double> SxH, std::vector<double> O, int dim_x, int dim_y, int n_h, int n_s, double sentinel, double sigma);
-RcppExport SEXP _ebrel_create_ebrel_class_object_R(SEXP ESEXP, SEXP CSEXP, SEXP SDSEXP, SEXP DSEXP, SEXP SxHSEXP, SEXP OSEXP, SEXP dim_xSEXP, SEXP dim_ySEXP, SEXP n_hSEXP, SEXP n_sSEXP, SEXP sentinelSEXP, SEXP sigmaSEXP) {
+Rcpp::List create_ebrel_class_object_R(const std::vector<double>& E, const std::vector<double>& C, const std::vector<double>& SD, const std::vector<int>& D, const std::vector<double>& SxH, const std::vector<double>& O, const std::vector<int>& LM, int dim_x, int dim_y, int n_h, int n_s, double sentinel, double sigma);
+RcppExport SEXP _ebrel_create_ebrel_class_object_R(SEXP ESEXP, SEXP CSEXP, SEXP SDSEXP, SEXP DSEXP, SEXP SxHSEXP, SEXP OSEXP, SEXP LMSEXP, SEXP dim_xSEXP, SEXP dim_ySEXP, SEXP n_hSEXP, SEXP n_sSEXP, SEXP sentinelSEXP, SEXP sigmaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::vector<double> >::type E(ESEXP);
-    Rcpp::traits::input_parameter< std::vector<double> >::type C(CSEXP);
-    Rcpp::traits::input_parameter< std::vector<double> >::type SD(SDSEXP);
-    Rcpp::traits::input_parameter< std::vector<int> >::type D(DSEXP);
-    Rcpp::traits::input_parameter< std::vector<double> >::type SxH(SxHSEXP);
-    Rcpp::traits::input_parameter< std::vector<double> >::type O(OSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type E(ESEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type C(CSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type SD(SDSEXP);
+    Rcpp::traits::input_parameter< const std::vector<int>& >::type D(DSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type SxH(SxHSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type O(OSEXP);
+    Rcpp::traits::input_parameter< const std::vector<int>& >::type LM(LMSEXP);
     Rcpp::traits::input_parameter< int >::type dim_x(dim_xSEXP);
     Rcpp::traits::input_parameter< int >::type dim_y(dim_ySEXP);
     Rcpp::traits::input_parameter< int >::type n_h(n_hSEXP);
     Rcpp::traits::input_parameter< int >::type n_s(n_sSEXP);
     Rcpp::traits::input_parameter< double >::type sentinel(sentinelSEXP);
     Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
-    rcpp_result_gen = Rcpp::wrap(create_ebrel_class_object_R(E, C, SD, D, SxH, O, dim_x, dim_y, n_h, n_s, sentinel, sigma));
+    rcpp_result_gen = Rcpp::wrap(create_ebrel_class_object_R(E, C, SD, D, SxH, O, LM, dim_x, dim_y, n_h, n_s, sentinel, sigma));
     return rcpp_result_gen;
 END_RCPP
 }
 // run_ebrel_R
-Rcpp::List run_ebrel_R(Rcpp::List ebrel_obj, Rcpp::Nullable<Rcpp::NumericVector> X0, double base_prob_X0, double sigma, int max_disp_thres, int disp_boundary, double alpha, double beta, double gamma, double step_proportion, double step_probability, int n_iterations, double temp, double cooling_rate_c, bool lam_enabled, double lam_target_mid, double lam_target_final, double lam_hold_frac, double lam_p, int min_iterations, int acceptance_window, double acceptance_thres, int iter_no_improve, double improve_eps, Rcpp::Nullable<Rcpp::IntegerVector> seed, bool verbose);
-RcppExport SEXP _ebrel_run_ebrel_R(SEXP ebrel_objSEXP, SEXP X0SEXP, SEXP base_prob_X0SEXP, SEXP sigmaSEXP, SEXP max_disp_thresSEXP, SEXP disp_boundarySEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP gammaSEXP, SEXP step_proportionSEXP, SEXP step_probabilitySEXP, SEXP n_iterationsSEXP, SEXP tempSEXP, SEXP cooling_rate_cSEXP, SEXP lam_enabledSEXP, SEXP lam_target_midSEXP, SEXP lam_target_finalSEXP, SEXP lam_hold_fracSEXP, SEXP lam_pSEXP, SEXP min_iterationsSEXP, SEXP acceptance_windowSEXP, SEXP acceptance_thresSEXP, SEXP iter_no_improveSEXP, SEXP improve_epsSEXP, SEXP seedSEXP, SEXP verboseSEXP) {
+Rcpp::List run_ebrel_R(Rcpp::List ebrel_obj, Rcpp::Nullable<Rcpp::NumericVector> X0, double base_prob_X0, double sigma, int universal_disp_thres, int max_disp_steps, int roi_cap, double alpha, double beta, double gamma, double step_proportion, double step_probability, int n_iterations, double temp, double cooling_rate_c, bool lam_enabled, double lam_target_mid, double lam_target_final, double lam_hold_frac, double lam_p, int min_iterations, int acceptance_window, double acceptance_thres, int iter_no_improve, double improve_eps, Rcpp::Nullable<Rcpp::IntegerVector> seed, bool verbose);
+RcppExport SEXP _ebrel_run_ebrel_R(SEXP ebrel_objSEXP, SEXP X0SEXP, SEXP base_prob_X0SEXP, SEXP sigmaSEXP, SEXP universal_disp_thresSEXP, SEXP max_disp_stepsSEXP, SEXP roi_capSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP gammaSEXP, SEXP step_proportionSEXP, SEXP step_probabilitySEXP, SEXP n_iterationsSEXP, SEXP tempSEXP, SEXP cooling_rate_cSEXP, SEXP lam_enabledSEXP, SEXP lam_target_midSEXP, SEXP lam_target_finalSEXP, SEXP lam_hold_fracSEXP, SEXP lam_pSEXP, SEXP min_iterationsSEXP, SEXP acceptance_windowSEXP, SEXP acceptance_thresSEXP, SEXP iter_no_improveSEXP, SEXP improve_epsSEXP, SEXP seedSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -42,8 +43,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericVector> >::type X0(X0SEXP);
     Rcpp::traits::input_parameter< double >::type base_prob_X0(base_prob_X0SEXP);
     Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
-    Rcpp::traits::input_parameter< int >::type max_disp_thres(max_disp_thresSEXP);
-    Rcpp::traits::input_parameter< int >::type disp_boundary(disp_boundarySEXP);
+    Rcpp::traits::input_parameter< int >::type universal_disp_thres(universal_disp_thresSEXP);
+    Rcpp::traits::input_parameter< int >::type max_disp_steps(max_disp_stepsSEXP);
+    Rcpp::traits::input_parameter< int >::type roi_cap(roi_capSEXP);
     Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
     Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
     Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
@@ -64,7 +66,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type improve_eps(improve_epsSEXP);
     Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::IntegerVector> >::type seed(seedSEXP);
     Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
-    rcpp_result_gen = Rcpp::wrap(run_ebrel_R(ebrel_obj, X0, base_prob_X0, sigma, max_disp_thres, disp_boundary, alpha, beta, gamma, step_proportion, step_probability, n_iterations, temp, cooling_rate_c, lam_enabled, lam_target_mid, lam_target_final, lam_hold_frac, lam_p, min_iterations, acceptance_window, acceptance_thres, iter_no_improve, improve_eps, seed, verbose));
+    rcpp_result_gen = Rcpp::wrap(run_ebrel_R(ebrel_obj, X0, base_prob_X0, sigma, universal_disp_thres, max_disp_steps, roi_cap, alpha, beta, gamma, step_proportion, step_probability, n_iterations, temp, cooling_rate_c, lam_enabled, lam_target_mid, lam_target_final, lam_hold_frac, lam_p, min_iterations, acceptance_window, acceptance_thres, iter_no_improve, improve_eps, seed, verbose));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -85,16 +87,17 @@ BEGIN_RCPP
 END_RCPP
 }
 // estimate_initial_temp_R
-Rcpp::List estimate_initial_temp_R(Rcpp::List ebrel_obj, Rcpp::Nullable<Rcpp::NumericVector> X0, double base_prob_X0, int max_disp_thres, int disp_boundary, double alpha, double beta, double gamma, double step_proportion, double step_probability, int num_samples, double chi0, double p, double tol_logchi, int max_iters, Rcpp::Nullable<Rcpp::NumericVector> T1, int max_tries_factor, double sigma, Rcpp::Nullable<Rcpp::IntegerVector> seed, bool verbose);
-RcppExport SEXP _ebrel_estimate_initial_temp_R(SEXP ebrel_objSEXP, SEXP X0SEXP, SEXP base_prob_X0SEXP, SEXP max_disp_thresSEXP, SEXP disp_boundarySEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP gammaSEXP, SEXP step_proportionSEXP, SEXP step_probabilitySEXP, SEXP num_samplesSEXP, SEXP chi0SEXP, SEXP pSEXP, SEXP tol_logchiSEXP, SEXP max_itersSEXP, SEXP T1SEXP, SEXP max_tries_factorSEXP, SEXP sigmaSEXP, SEXP seedSEXP, SEXP verboseSEXP) {
+Rcpp::List estimate_initial_temp_R(Rcpp::List ebrel_obj, Rcpp::Nullable<Rcpp::NumericVector> X0, double base_prob_X0, int universal_disp_thres, int max_disp_steps, int roi_cap, double alpha, double beta, double gamma, double step_proportion, double step_probability, int num_samples, double chi0, double p, double tol_logchi, int max_iters, Rcpp::Nullable<Rcpp::NumericVector> T1, int max_tries_factor, double sigma, Rcpp::Nullable<Rcpp::IntegerVector> seed, bool verbose);
+RcppExport SEXP _ebrel_estimate_initial_temp_R(SEXP ebrel_objSEXP, SEXP X0SEXP, SEXP base_prob_X0SEXP, SEXP universal_disp_thresSEXP, SEXP max_disp_stepsSEXP, SEXP roi_capSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP gammaSEXP, SEXP step_proportionSEXP, SEXP step_probabilitySEXP, SEXP num_samplesSEXP, SEXP chi0SEXP, SEXP pSEXP, SEXP tol_logchiSEXP, SEXP max_itersSEXP, SEXP T1SEXP, SEXP max_tries_factorSEXP, SEXP sigmaSEXP, SEXP seedSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::List >::type ebrel_obj(ebrel_objSEXP);
     Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericVector> >::type X0(X0SEXP);
     Rcpp::traits::input_parameter< double >::type base_prob_X0(base_prob_X0SEXP);
-    Rcpp::traits::input_parameter< int >::type max_disp_thres(max_disp_thresSEXP);
-    Rcpp::traits::input_parameter< int >::type disp_boundary(disp_boundarySEXP);
+    Rcpp::traits::input_parameter< int >::type universal_disp_thres(universal_disp_thresSEXP);
+    Rcpp::traits::input_parameter< int >::type max_disp_steps(max_disp_stepsSEXP);
+    Rcpp::traits::input_parameter< int >::type roi_cap(roi_capSEXP);
     Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
     Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
     Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
@@ -110,16 +113,66 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
     Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::IntegerVector> >::type seed(seedSEXP);
     Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
-    rcpp_result_gen = Rcpp::wrap(estimate_initial_temp_R(ebrel_obj, X0, base_prob_X0, max_disp_thres, disp_boundary, alpha, beta, gamma, step_proportion, step_probability, num_samples, chi0, p, tol_logchi, max_iters, T1, max_tries_factor, sigma, seed, verbose));
+    rcpp_result_gen = Rcpp::wrap(estimate_initial_temp_R(ebrel_obj, X0, base_prob_X0, universal_disp_thres, max_disp_steps, roi_cap, alpha, beta, gamma, step_proportion, step_probability, num_samples, chi0, p, tol_logchi, max_iters, T1, max_tries_factor, sigma, seed, verbose));
+    return rcpp_result_gen;
+END_RCPP
+}
+// compute_G_R
+Rcpp::NumericVector compute_G_R(const Rcpp::NumericVector& X, const Rcpp::NumericVector& E, const Rcpp::NumericVector& SD, const Rcpp::NumericVector& SxH, const Rcpp::IntegerVector& D, int n_h, int n_s, int dim_x, int dim_y, int universal_disp_thres, int max_disp_steps, int roi_cap, const Rcpp::IntegerVector& LM, const Rcpp::IntegerVector& row_first_land, const Rcpp::IntegerVector& row_last_land, const Rcpp::IntegerVector& col_first_land, const Rcpp::IntegerVector& col_last_land);
+RcppExport SEXP _ebrel_compute_G_R(SEXP XSEXP, SEXP ESEXP, SEXP SDSEXP, SEXP SxHSEXP, SEXP DSEXP, SEXP n_hSEXP, SEXP n_sSEXP, SEXP dim_xSEXP, SEXP dim_ySEXP, SEXP universal_disp_thresSEXP, SEXP max_disp_stepsSEXP, SEXP roi_capSEXP, SEXP LMSEXP, SEXP row_first_landSEXP, SEXP row_last_landSEXP, SEXP col_first_landSEXP, SEXP col_last_landSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type E(ESEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type SD(SDSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type SxH(SxHSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type D(DSEXP);
+    Rcpp::traits::input_parameter< int >::type n_h(n_hSEXP);
+    Rcpp::traits::input_parameter< int >::type n_s(n_sSEXP);
+    Rcpp::traits::input_parameter< int >::type dim_x(dim_xSEXP);
+    Rcpp::traits::input_parameter< int >::type dim_y(dim_ySEXP);
+    Rcpp::traits::input_parameter< int >::type universal_disp_thres(universal_disp_thresSEXP);
+    Rcpp::traits::input_parameter< int >::type max_disp_steps(max_disp_stepsSEXP);
+    Rcpp::traits::input_parameter< int >::type roi_cap(roi_capSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type LM(LMSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type row_first_land(row_first_landSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type row_last_land(row_last_landSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type col_first_land(col_first_landSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type col_last_land(col_last_landSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_G_R(X, E, SD, SxH, D, n_h, n_s, dim_x, dim_y, universal_disp_thres, max_disp_steps, roi_cap, LM, row_first_land, row_last_land, col_first_land, col_last_land));
+    return rcpp_result_gen;
+END_RCPP
+}
+// omp_thread_count_test
+int omp_thread_count_test();
+RcppExport SEXP _ebrel_omp_thread_count_test() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(omp_thread_count_test());
+    return rcpp_result_gen;
+END_RCPP
+}
+// openmp_threads
+int openmp_threads();
+RcppExport SEXP _ebrel_openmp_threads() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(openmp_threads());
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_ebrel_create_ebrel_class_object_R", (DL_FUNC) &_ebrel_create_ebrel_class_object_R, 12},
-    {"_ebrel_run_ebrel_R", (DL_FUNC) &_ebrel_run_ebrel_R, 26},
+    {"_ebrel_create_ebrel_class_object_R", (DL_FUNC) &_ebrel_create_ebrel_class_object_R, 13},
+    {"_ebrel_run_ebrel_R", (DL_FUNC) &_ebrel_run_ebrel_R, 27},
     {"_ebrel_generate_X0_A_R", (DL_FUNC) &_ebrel_generate_X0_A_R, 6},
-    {"_ebrel_estimate_initial_temp_R", (DL_FUNC) &_ebrel_estimate_initial_temp_R, 20},
+    {"_ebrel_estimate_initial_temp_R", (DL_FUNC) &_ebrel_estimate_initial_temp_R, 21},
+    {"_ebrel_compute_G_R", (DL_FUNC) &_ebrel_compute_G_R, 17},
+    {"_ebrel_omp_thread_count_test", (DL_FUNC) &_ebrel_omp_thread_count_test, 0},
+    {"_ebrel_openmp_threads", (DL_FUNC) &_ebrel_openmp_threads, 0},
     {NULL, NULL, 0}
 };
 

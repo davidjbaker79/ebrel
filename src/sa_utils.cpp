@@ -11,6 +11,7 @@
 #include <limits>
 #include <stdexcept>
 #include <iostream>
+#include <cstdint>
 
 //---------------------- Local helper functions --------------------------------
 
@@ -50,8 +51,14 @@ InitTempResult estimate_initial_temperature_benameur_cpp(
     const std::vector<double>& SD,
     const std::vector<double>& SxH,
     const std::vector<int>&    D,
-    int    max_disp_thres,
-    int    disp_boundary,
+    int    universal_disp_thres,
+    int    max_disp_steps,
+    int    roi_cap,
+    const  std::vector<uint8_t>& LM,
+    const  std::vector<int>& row_first_land,
+    const  std::vector<int>& row_last_land,
+    const  std::vector<int>& col_first_land,
+    const  std::vector<int>& col_last_land,
     int    n_h,
     int    n_s,
     int    dim_x,
@@ -94,7 +101,12 @@ InitTempResult estimate_initial_temperature_benameur_cpp(
   // Initial
   double E_base = compute_H(X_seed, C, E, O, SD, SxH, D,
                             alpha_scaled, beta_scaled, gamma_scaled,
-                            n_h, dim_x, dim_y, max_disp_thres, disp_boundary).H;
+                            n_h, n_s, dim_x, dim_y,
+                            universal_disp_thres,
+                            max_disp_steps,
+                            roi_cap, LM,
+                            row_first_land, row_last_land,
+                            col_first_land, col_last_land).H;
 
   const int max_tries = std::max(num_samples * max_tries_factor, 100);
   int tries = 0;
@@ -108,7 +120,12 @@ InitTempResult estimate_initial_temperature_benameur_cpp(
 
     double E_cand = compute_H(cand, C, E, O, SD, SxH, D,
                               alpha_scaled, beta_scaled, gamma_scaled,
-                              n_h, dim_x, dim_y, max_disp_thres, disp_boundary).H;
+                              n_h, n_s, dim_x, dim_y,
+                              universal_disp_thres,
+                              max_disp_steps,
+                              roi_cap, LM,
+                              row_first_land, row_last_land,
+                              col_first_land, col_last_land).H;
 
     const double dE = E_cand - E_base;
     if (dE > 0.0) {
@@ -126,7 +143,7 @@ InitTempResult estimate_initial_temperature_benameur_cpp(
 
   if (Emins.empty()) {
     // No uphill moves observed -> tiny T0 and diagnostics
-    res.T0 = 1e-6;
+    res.T0                 = 1e-6;
     res.diag.samples_used  = 0;
     res.diag.chi0          = chi0;
     res.diag.chi_hat_final = 0.0;

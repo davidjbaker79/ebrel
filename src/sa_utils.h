@@ -4,6 +4,7 @@
 #define SA_UTILS_H
 
 #include <vector>
+#include <cstdint>
 
 // Diagnostics returned with the temperature estimate
 struct InitTempDiag {
@@ -45,8 +46,14 @@ InitTempResult estimate_initial_temperature_benameur_cpp(
     const std::vector<double>& SD,
     const std::vector<double>& SxH,
     const std::vector<int>&    D,
-    int    max_disp_thres,
-    int    disp_boundary,
+    int    universal_disp_thres,
+    int    max_disp_steps,
+    int    roi_cap,
+    const  std::vector<uint8_t>& LM,
+    const  std::vector<int>& row_first_land,
+    const  std::vector<int>& row_last_land,
+    const  std::vector<int>& col_first_land,
+    const  std::vector<int>& col_last_land,
     int    n_h,
     int    n_s,
     int    dim_x,
