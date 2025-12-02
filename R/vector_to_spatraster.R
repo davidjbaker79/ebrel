@@ -38,7 +38,7 @@ vector_to_spatraster <- function(vec, nh, dim1, dim2, extent = NULL, crs = NA) {
   }
 
   # 3D array: [rows, cols, layers] → [dim2, dim1, nh] after transpose
-  arr <- array(unlist(layers), dim = c(dim1, dim2, nh))
+  arr <- array(unlist(layers), dim = c(dim2, dim1, nh))
 
   # terra expects [rows, cols, layers] → flip dims 1 and 2
   r <- terra::rast(arr)

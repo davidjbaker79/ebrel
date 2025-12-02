@@ -113,13 +113,14 @@
 #' }
 #'
 #' @export
+dim_x = 45; dim_y = 55
 simulate_ebrel_spatial_data <- function(
     dim_x,
     dim_y,
     n_h, # Number of selectable opportunity habitat types is n_h - 1
     n_s,
     disp_max,
-    disp_longtail = 0.5,
+    disp_longtail = 1,
     rarity_bias = 1,
     fixed_O = NULL,
     maskLandArea = FALSE,
@@ -134,7 +135,11 @@ simulate_ebrel_spatial_data <- function(
   # --- Number of cells
   n_cells <- dim_x * dim_y
 
-  gamma_params <- .map_longtail_to_gamma(disp_longtail, dim_x)
+  # --- Max dispersal
+  dim_max <- max(dim_x, dim_y)
+
+  # --- Dispersal params
+  gamma_params <- .map_longtail_to_gamma(disp_longtail, dim_max)
   long_disp_shape <- gamma_params$shape
   long_disp_scale <- gamma_params$scale
 
@@ -432,7 +437,7 @@ simulate_ebrel_spatial_data <- function(
 
   # - Make sea mask
   LM <- setValues(habitat[[1]], 0)
-  LM <- make_land_mask(LM, prop_sea = prop_sea, smooth_window = 5)
+  LM <- .make_land_mask(LM, prop_sea = prop_sea, smooth_window = 5)
 
   list(
     HP = habitat,
@@ -501,7 +506,7 @@ simulate_ebrel_spatial_data <- function(
 #'
 #' @keywords internal
 #' @noRd
-make_land_mask <- function(r, prop_sea = 0.3, smooth_window = 5, seed = NULL) {
+.make_land_mask <- function(r, prop_sea = 0.3, smooth_window = 5, seed = NULL) {
   if (!is.null(seed)) set.seed(seed)
 
   nr <- nrow(r)
@@ -516,6 +521,7 @@ make_land_mask <- function(r, prop_sea = 0.3, smooth_window = 5, seed = NULL) {
   # Smooth coastline
   k <- rep(1 / smooth_window, smooth_window)
   coast_smooth <- stats::filter(coast_raw, k, sides = 2)
+
   # replace NAs at edges with original values
   coast_smooth[is.na(coast_smooth)] <- coast_raw[is.na(coast_smooth)]
   coast <- pmax(1, pmin(max_sea_rows, round(coast_smooth)))
@@ -523,15 +529,13 @@ make_land_mask <- function(r, prop_sea = 0.3, smooth_window = 5, seed = NULL) {
   # Build a matrix where 1 = land, NA = sea
   mat <- matrix(1, nrow = nr, ncol = nc)
   for (j in seq_len(nc)) {
-    if (coast[j] > 0) {
-      bottom_rows <- (nr - coast[j] + 1):nr
-      mat[j, bottom_rows] <- NA
-    }
+    sea_rows <- (nr - coast[j] + 1):nr   # rows that should be NA for column j
+    mat[sea_rows, j] <- NA               # row first, then column
   }
 
   # Create SpatRaster with same geometry as input
   land_r <- r
-  values(land_r) <- as.vector(mat)
+  values(land_r) <- as.vector(t(mat))
   names(land_r) <- "land"
 
   return(land_r)
