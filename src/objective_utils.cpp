@@ -10,7 +10,7 @@
 #include <cstddef>
 #include <stdexcept>  // std::runtime_error, std::invalid_argument
 #include <string>     // std::to_strings
-#include <iostream>
+//#include <iostream>
 
 //-------------------------- Local helper functions ----------------------------
 namespace {
@@ -225,12 +225,12 @@ HResult compute_H(const std::vector<double>& X,
     const double Gi = G[static_cast<std::size_t>(sp)];
     g[static_cast<std::size_t>(sp)] = std::max(0.0, target - Gi);
 
-    std::cout << "sp=" << sp
-              << " m_i=" << m_i
-              << " target=" << target
-              << " G=" << Gi
-              << " shortfall=" << std::max(0.0, target - Gi)
-              << std::endl;
+    // std::cout << "sp=" << sp
+    //           << " m_i=" << m_i
+    //           << " target=" << target
+    //           << " G=" << Gi
+    //           << " shortfall=" << std::max(0.0, target - Gi)
+    //           << std::endl;
 
   }
 
