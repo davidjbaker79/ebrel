@@ -25,11 +25,14 @@ SAResult simulated_annealing(
     const std::vector<double>& W,
     const std::vector<double>& U,
     const std::vector<double>& C,
-    const std::vector<double>& E,
     const std::vector<double>& O,
-    const std::vector<double>& SD,
     const std::vector<double>& SxH,
     const std::vector<int>& D,
+    const std::vector<int>& E_h_of_cell,
+    const std::vector<std::vector<std::size_t>>& Etiles_per_h,
+    const std::vector<int>&    cell_r,
+    const std::vector<int>&    cell_c,
+    const std::vector<SpeciesDispData>& species_info,
     // ---------- Dimensions
     int n_h,
     int n_s,
@@ -87,13 +90,18 @@ SAResult simulated_annealing(
   std::vector<double> F2_history;
 
   // Initial evaluation of X0
-  HResult init_scores = compute_H(X0, C, E, O, SD, SxH, D,
+  HResult init_scores = compute_H(X0, C, O, SxH, D,
                                   alpha_scaled, beta_scaled, gamma_scaled,
-                                  n_h, n_s, dim_x, dim_y,
-                                  universal_disp_thres,
-                                  max_disp_steps, roi_cap,
-                                  LM, row_first_land, row_last_land,
-                                  col_first_land, col_last_land);
+                                  n_h, n_s,
+                                  dim_x, dim_y,
+                                  universal_disp_thres, max_disp_steps, roi_cap,
+                                  LM,
+                                  row_first_land, row_last_land,
+                                  col_first_land, col_last_land,
+                                  E_h_of_cell,
+                                  Etiles_per_h,
+                                  cell_r, cell_c,
+                                  species_info);
 
   double best_score = init_scores.H;
 
@@ -155,13 +163,18 @@ SAResult simulated_annealing(
     attempted_total++;
 
     // Evaluate candidate with new params
-    HResult scores = compute_H(candidate, C, E, O, SD, SxH, D,
+    HResult scores = compute_H(candidate, C, O, SxH, D,
                                alpha_scaled, beta_scaled, gamma_scaled,
-                               n_h, n_s, dim_x, dim_y,
-                               universal_disp_thres,
-                               max_disp_steps, roi_cap,
-                               LM, row_first_land, row_last_land,
-                               col_first_land, col_last_land);
+                               n_h, n_s,
+                               dim_x, dim_y,
+                               universal_disp_thres, max_disp_steps, roi_cap,
+                               LM,
+                               row_first_land, row_last_land,
+                               col_first_land, col_last_land,
+                               E_h_of_cell,
+                               Etiles_per_h,
+                               cell_r, cell_c,
+                               species_info);
     double candidate_eval = scores.H;
 
     // Trace histories

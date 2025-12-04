@@ -17,10 +17,6 @@ estimate_initial_temp_R <- function(ebrel_obj, X0 = NULL, base_prob_X0 = 0.85, u
     .Call(`_ebrel_estimate_initial_temp_R`, ebrel_obj, X0, base_prob_X0, universal_disp_thres, max_disp_steps, roi_cap, alpha, beta, gamma, step_proportion, step_probability, num_samples, chi0, p, tol_logchi, max_iters, T1, max_tries_factor, sigma, seed, verbose)
 }
 
-compute_G_R <- function(X, E, SD, SxH, D, n_h, n_s, dim_x, dim_y, universal_disp_thres, max_disp_steps, roi_cap, LM, row_first_land, row_last_land, col_first_land, col_last_land) {
-    .Call(`_ebrel_compute_G_R`, X, E, SD, SxH, D, n_h, n_s, dim_x, dim_y, universal_disp_thres, max_disp_steps, roi_cap, LM, row_first_land, row_last_land, col_first_land, col_last_land)
-}
-
 ebrel_omp_thread_limit <- function() {
     .Call(`_ebrel_ebrel_omp_thread_limit`)
 }

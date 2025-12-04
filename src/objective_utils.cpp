@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <stdexcept>  // std::runtime_error, std::invalid_argument
 #include <string>     // std::to_strings
+#include <iostream>
 
 //-------------------------- Local helper functions ----------------------------
 namespace {
@@ -73,13 +74,14 @@ namespace {
 double compute_F1(const std::vector<double>& X,
                   const std::vector<double>& C,
                   int n_h, int dim_x, int dim_y) {
-  const std::size_t cells = n_cells(dim_x, dim_y);
+
+  const int cells = n_cells(dim_x, dim_y);
   double f1 = 0.0;
 
   for (int h = 0; h < n_h; ++h) {
-    const std::size_t base = static_cast<std::size_t>(h) * cells;
-    for (std::size_t tile = 0; tile < cells; ++tile) {
-      const std::size_t idx = base + tile;
+    const std::size_t base = static_cast<std::size_t>(h) * static_cast<std::size_t>(cells);
+    for (int tile = 0; tile < cells; ++tile) {
+      std::size_t idx = base + static_cast<std::size_t>(tile);
       const double x = X[idx];
       if (x != 0.0) f1 += x * C[idx];  // skip zero in X as these will dominate
     }
@@ -90,34 +92,38 @@ double compute_F1(const std::vector<double>& X,
 // F2: total = w_xx * (X–X sum once) + w_ex * (E–X sum once)
 //  - original formulation used ordered pairwise sum, but this weights xx more than xe
 double compute_F2(const std::vector<double>& X,
-                  const std::vector<double>& E,
+                  const std::vector<std::vector<std::size_t>>& Etiles_per_h,
                   int n_h, int dim_x, int dim_y) {
-  const std::size_t cells = n_cells(dim_x, dim_y);
+
+  const int cells = n_cells(dim_x, dim_y);
   double total = 0.0;
 
+  // For each habitat
   for (int h = 0; h < n_h; ++h) {
-    const std::size_t base = static_cast<std::size_t>(h) * cells;
+    const std::size_t base = static_cast<std::size_t>(h)* static_cast<std::size_t>(cells);
 
-    // Collect tile indices (integers) instead of allocating 2D coords
+    // Precomputed E tiles for this habitat
+    const std::vector<std::size_t>& Etiles = Etiles_per_h[static_cast<std::size_t>(h)];
+
+    // Collect X tiles for this habitat under the current configuration
     std::vector<std::size_t> Xtiles;
-    std::vector<std::size_t> Etiles;
-    Xtiles.reserve(cells / 8); // heuristic; OK to drop
-    Etiles.reserve(cells / 8);
-
-    for (std::size_t tile = 0; tile < cells; ++tile) {
-      const std::size_t idx = base + tile;
-      if (X[idx] == 1.0) Xtiles.push_back(tile);
-      if (E[idx] == 1.0) Etiles.push_back(tile);
+    Xtiles.reserve(cells / 8); // or reserve(Etiles.size()) if you like
+    for (int tile = 0; tile < cells; ++tile) {
+      std::size_t idx = base + static_cast<std::size_t>(tile);
+      if (X[idx] == 1.0) {
+        Xtiles.push_back(tile);
+      }
     }
 
-    const double xx_once = sum_pairwise_self_unordered(Xtiles, dim_x); // unordered (i<j) only
-    const double ex_once = sum_pairwise_cross(Etiles, Xtiles, dim_x);  // E×X once
+    const double xx_once = sum_pairwise_self_unordered(Xtiles, dim_x);  // X–X
+    const double ex_once = sum_pairwise_cross(Etiles, Xtiles, dim_x); // E–X
 
-    // Calculate total (xx_once using unordered pairs; 2 * xx_once to get ordered)
-    total += 1 * xx_once + 1 * ex_once;
+    total += xx_once + ex_once;
   }
+
   return total;
 }
+
 
 // // F(X) = alpha * F1 + beta * F2
 // double compute_F(const std::vector<double>& X,
@@ -133,9 +139,7 @@ double compute_F2(const std::vector<double>& X,
 // ---- Compute H
 HResult compute_H(const std::vector<double>& X,
                   const std::vector<double>& C,
-                  const std::vector<double>& E,
                   const std::vector<double>& O,
-                  const std::vector<double>& SD,
                   const std::vector<double>& SxH,
                   const std::vector<int>& D,
                   double alpha_scaled,
@@ -152,23 +156,31 @@ HResult compute_H(const std::vector<double>& X,
                   const std::vector<int>& row_first_land,
                   const std::vector<int>& row_last_land,
                   const std::vector<int>& col_first_land,
-                  const std::vector<int>& col_last_land)
+                  const std::vector<int>& col_last_land,
+                  const std::vector<int>& E_h_of_cell,
+                  const std::vector<std::vector<std::size_t>>& Etiles_per_h,
+                  const std::vector<int>& cell_r,
+                  const std::vector<int>& cell_c,
+                  const std::vector<SpeciesDispData>& species_info)
 {
 
-  // ---- Dimensions: cells ----
-  const std::size_t cells = n_cells(dim_x, dim_y);
+  const int cells = n_cells(dim_x, dim_y);
 
   // ---- F1 and F2 -----
   const double f1 = compute_F1(X, C, n_h, dim_x, dim_y);
-  const double f2 = compute_F2(X, E, n_h, dim_x, dim_y);
+  const double f2 = compute_F2(X, Etiles_per_h, n_h, dim_x, dim_y);
 
   // ---- Compute G ----
   std::vector<double> G;
-  G = compute_G(X, E, SD, SxH, D,
-                n_h, n_s, dim_x, dim_y,
+  G = compute_G(X, n_h, n_s,
+                dim_x, dim_y,
                 universal_disp_thres, max_disp_steps, roi_cap,
-                LM, row_first_land, row_last_land,
-                col_first_land, col_last_land);
+                LM,
+                row_first_land, row_last_land,
+                col_first_land, col_last_land,
+                cell_r, cell_c,
+                E_h_of_cell,
+                species_info);
 
   // ---- Shortfall per species relative to target o_i * m_i ----
   std::vector<double> g(n_s, 0.0);
@@ -178,33 +190,47 @@ HResult compute_H(const std::vector<double>& X,
   for (int sp = 0; sp < n_s; ++sp) {
 
     // Per-species suitability flags ----
-    std::vector<uint8_t> suitable_h_flag(n_h, 0u);
-    for (int h = 0; h < n_h; ++h) {
-      const std::size_t base_h = static_cast<std::size_t>(h) * static_cast<std::size_t>(n_s);
-      suitable_h_flag[h] = (SxH[base_h + static_cast<std::size_t>(sp)] > 0.0) ? 1u : 0u;
+    const SpeciesDispData& S = species_info[sp];
+
+    // Check whether the species can go anywhere
+    if (!S.active) {
+      // No seeds / empty ROI -> no shortfall contribution
+      g[sp] = 0.0;
+      continue;
     }
 
     // X mask by species ----
     std::vector<double> sp_sd_x_mask(static_cast<std::size_t>(cells), 1u);
     for (int h = 0; h < n_h; ++h) {
-      for (std::size_t k = 0; k < cells; ++k) {
+      if (!S.suitable_h_flag[h]) {
+        // Cells in habitat h that are "on" in X become unsuitable
         const std::size_t base_h = static_cast<std::size_t>(h) * static_cast<std::size_t>(cells);
-        if (suitable_h_flag[h] == 0.0 && X[base_h + k] > 0.0 ) {
-          sp_sd_x_mask[k] = 0u;
+        for (std::size_t k = 0; k < static_cast<std::size_t>(cells); ++k) {
+          if (X[base_h + k] > 0.0) {
+            sp_sd_x_mask[k] = 0u;
+          }
         }
       }
     }
 
     // m_i: initial occupied tiles for species i (from SD)
     int m_i = 0;
-    const std::size_t base_s = static_cast<std::size_t>(sp) * cells;
-    for (std::size_t k = 0; k < cells; ++k) {
-      if (SD[base_s + k] == 1.0 && sp_sd_x_mask[k] == 1.0) ++m_i;
+    for (std::size_t idx : S.seed_idxs) {
+      if (sp_sd_x_mask[idx] == 1u) {
+        ++m_i;
+      }
     }
 
     const double target = O[static_cast<std::size_t>(sp)] * static_cast<double>(m_i);
     const double Gi = G[static_cast<std::size_t>(sp)];
     g[static_cast<std::size_t>(sp)] = std::max(0.0, target - Gi);
+
+    std::cout << "sp=" << sp
+              << " m_i=" << m_i
+              << " target=" << target
+              << " G=" << Gi
+              << " shortfall=" << std::max(0.0, target - Gi)
+              << std::endl;
 
   }
 

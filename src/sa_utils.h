@@ -5,6 +5,7 @@
 
 #include <vector>
 #include <cstdint>
+#include "dispersal_utils.h"
 
 // Diagnostics returned with the temperature estimate
 struct InitTempDiag {
@@ -41,11 +42,15 @@ InitTempResult estimate_initial_temperature_benameur_cpp(
     const std::vector<double>& W,         // distance weights
     const std::vector<double>& U,
     const std::vector<double>& C,
-    const std::vector<double>& E,
     const std::vector<double>& O,
     const std::vector<double>& SD,
     const std::vector<double>& SxH,
     const std::vector<int>&    D,
+    const std::vector<int>& E_h_of_cell,
+    const std::vector<std::vector<std::size_t>>& Etiles_per_h,
+    const std::vector<int>&    cell_r,
+    const std::vector<int>&    cell_c,
+    const std::vector<SpeciesDispData>& species_info,
     int    universal_disp_thres,
     int    max_disp_steps,
     int    roi_cap,

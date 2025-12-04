@@ -28,7 +28,7 @@ double compute_F1(const std::vector<double>& X,
 
 // Declare F2 objective function
 double compute_F2(const std::vector<double>& X,
-                  const std::vector<double>& E,
+                  const std::vector<std::vector<std::size_t>>& Etiles_per_h,
                   int n_h,
                   int dim_x,
                   int dim_y);
@@ -40,22 +40,20 @@ double euclidean_distance(const std::vector<double>& a,
 double pairwise_distances(const std::vector<std::vector<double>>& A,
                           const std::vector<std::vector<double>>& B);
 
-// Declare function to compute F(x)
-double compute_F(const std::vector<double>& X,
-                 const std::vector<double>& C,
-                 const std::vector<double>& E,
-                 double alpha,
-                 double beta,
-                 int n_h,
-                 int dim_x,
-                 int dim_y);
+// // Declare function to compute F(x)
+// double compute_F(const std::vector<double>& X,
+//                  const std::vector<double>& C,
+//                  const std::vector<double>& E,
+//                  double alpha,
+//                  double beta,
+//                  int n_h,
+//                  int dim_x,
+//                  int dim_y);
 
 // Declare function to compute H(x)
 HResult compute_H(const std::vector<double>& X,
                   const std::vector<double>& C,
-                  const std::vector<double>& E,
                   const std::vector<double>& O,
-                  const std::vector<double>& SD,
                   const std::vector<double>& SxH,
                   const std::vector<int>& D,
                   double alpha_scaled,
@@ -72,7 +70,12 @@ HResult compute_H(const std::vector<double>& X,
                   const std::vector<int>& row_first_land,
                   const std::vector<int>& row_last_land,
                   const std::vector<int>& col_first_land,
-                  const std::vector<int>& col_last_land
+                  const std::vector<int>& col_last_land,
+                  const std::vector<int>& E_h_of_cell,
+                  const std::vector<std::vector<std::size_t>>& Etiles_per_h,
+                  const std::vector<int>& cell_r,
+                  const std::vector<int>& cell_c,
+                  const std::vector<SpeciesDispData>& species_info
                   );
 
 #endif // OBJECTIVE_UTILS_H

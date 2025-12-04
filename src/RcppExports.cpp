@@ -117,33 +117,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// compute_G_R
-Rcpp::NumericVector compute_G_R(const Rcpp::NumericVector& X, const Rcpp::NumericVector& E, const Rcpp::NumericVector& SD, const Rcpp::NumericVector& SxH, const Rcpp::IntegerVector& D, int n_h, int n_s, int dim_x, int dim_y, int universal_disp_thres, int max_disp_steps, int roi_cap, const Rcpp::IntegerVector& LM, const Rcpp::IntegerVector& row_first_land, const Rcpp::IntegerVector& row_last_land, const Rcpp::IntegerVector& col_first_land, const Rcpp::IntegerVector& col_last_land);
-RcppExport SEXP _ebrel_compute_G_R(SEXP XSEXP, SEXP ESEXP, SEXP SDSEXP, SEXP SxHSEXP, SEXP DSEXP, SEXP n_hSEXP, SEXP n_sSEXP, SEXP dim_xSEXP, SEXP dim_ySEXP, SEXP universal_disp_thresSEXP, SEXP max_disp_stepsSEXP, SEXP roi_capSEXP, SEXP LMSEXP, SEXP row_first_landSEXP, SEXP row_last_landSEXP, SEXP col_first_landSEXP, SEXP col_last_landSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type X(XSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type E(ESEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type SD(SDSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type SxH(SxHSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type D(DSEXP);
-    Rcpp::traits::input_parameter< int >::type n_h(n_hSEXP);
-    Rcpp::traits::input_parameter< int >::type n_s(n_sSEXP);
-    Rcpp::traits::input_parameter< int >::type dim_x(dim_xSEXP);
-    Rcpp::traits::input_parameter< int >::type dim_y(dim_ySEXP);
-    Rcpp::traits::input_parameter< int >::type universal_disp_thres(universal_disp_thresSEXP);
-    Rcpp::traits::input_parameter< int >::type max_disp_steps(max_disp_stepsSEXP);
-    Rcpp::traits::input_parameter< int >::type roi_cap(roi_capSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type LM(LMSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type row_first_land(row_first_landSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type row_last_land(row_last_landSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type col_first_land(col_first_landSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type col_last_land(col_last_landSEXP);
-    rcpp_result_gen = Rcpp::wrap(compute_G_R(X, E, SD, SxH, D, n_h, n_s, dim_x, dim_y, universal_disp_thres, max_disp_steps, roi_cap, LM, row_first_land, row_last_land, col_first_land, col_last_land));
-    return rcpp_result_gen;
-END_RCPP
-}
 // ebrel_omp_thread_limit
 int ebrel_omp_thread_limit();
 RcppExport SEXP _ebrel_ebrel_omp_thread_limit() {
@@ -170,7 +143,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_ebrel_run_ebrel_R", (DL_FUNC) &_ebrel_run_ebrel_R, 27},
     {"_ebrel_generate_X0_A_R", (DL_FUNC) &_ebrel_generate_X0_A_R, 6},
     {"_ebrel_estimate_initial_temp_R", (DL_FUNC) &_ebrel_estimate_initial_temp_R, 21},
-    {"_ebrel_compute_G_R", (DL_FUNC) &_ebrel_compute_G_R, 17},
     {"_ebrel_ebrel_omp_thread_limit", (DL_FUNC) &_ebrel_ebrel_omp_thread_limit, 0},
     {"_ebrel_ebrel_omp_for_threads", (DL_FUNC) &_ebrel_ebrel_omp_for_threads, 0},
     {NULL, NULL, 0}

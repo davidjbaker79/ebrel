@@ -320,17 +320,61 @@ Rcpp::List estimate_initial_temp_R(
       X_seed = generate_X0_A(U, n_h, dim_x, dim_y, base_prob_X0, rng_seed);
     }
 
+    // ---- Number of grid cells ----
+    const std::size_t cells = n_cells(dim_x, dim_y);
+
+    // ---- Precompute row/col coords [TESTED in codePad & WORKS] ----
+    std::vector<int> cell_r(cells), cell_c(cells);
+    for (std::size_t k = 0; k < cells; ++k) {
+      cell_r[k] = static_cast<int>(k / static_cast<std::size_t>(dim_x));
+      cell_c[k] = static_cast<int>(k % static_cast<std::size_t>(dim_x));
+    }
+
+    // ---- One-hot habitat index per cell for E (-1 = none) [TESTED in codePad & WORKS] ----
+    std::vector<int> E_h_of_cell(cells, -1);
+    for (int h = 0; h < n_h; ++h) {
+      const std::size_t base = static_cast<std::size_t>(h) * cells;
+      for (std::size_t k = 0; k < cells; ++k) {
+        if (E[base + k] == 1.0) E_h_of_cell[k] = h;
+      }
+    }
+
+    // ---- Pre-compute Etiles for compute_F2 ----
+    std::vector<std::vector<std::size_t>> Etiles_per_h(n_h);
+    for (std::size_t tile = 0; tile < cells; ++tile) {
+      int h = E_h_of_cell[tile];
+      if (h >= 0) {
+        Etiles_per_h[static_cast<std::size_t>(h)].push_back(tile);
+      }
+    }
+
+    // --- Pre-compute species-specific dispersal information ---
+    std::vector<SpeciesDispData> species_info = precompute_species_data(
+      SD, SxH, D,
+      n_h, n_s,
+      dim_x, dim_y,
+      universal_disp_thres, max_disp_steps, roi_cap,
+      row_first_land, row_last_land,
+      col_first_land, col_last_land,
+      E_h_of_cell,
+      cell_r, cell_c
+    );
+
     // initial objective function evaluations and scaling as per run_ebrel function
     const double F1 = compute_F1(X_seed, C, n_h, dim_x, dim_y);
-    const double F2 = compute_F2(X_seed, E, n_h, dim_x, dim_y);
+    const double F2 = compute_F2(X_seed, Etiles_per_h, n_h, dim_x, dim_y);
 
     // Use the same G variant as SA so scaling matches the run
-    std::vector<double> G_init;
-    G_init = compute_G(X_seed, E, SD, SxH, D,
-                       n_h, n_s, dim_x, dim_y,
-                       universal_disp_thres, max_disp_steps,
-                       roi_cap, LM, row_first_land, row_last_land,
-                       col_first_land, col_last_land);
+    std::vector<double> G_init = compute_G(
+      X_seed, n_h, n_s, dim_x, dim_y,
+      universal_disp_thres,
+      max_disp_steps, roi_cap, LM,
+      row_first_land, row_last_land,
+      col_first_land,col_last_land,
+      cell_r, cell_c,
+      E_h_of_cell,
+      species_info
+    );
     const double G_sum = std::accumulate(G_init.begin(), G_init.end(), 0.0);
 
     const double eps   = 1e-12;
@@ -350,9 +394,11 @@ Rcpp::List estimate_initial_temp_R(
 
     // IMPORTANT: pass X_seed (std::vector<double>), not X0 (Nullable)
     InitTempResult out = estimate_initial_temperature_benameur_cpp(
-      X_seed, W, U, C, E, O, SD, SxH, D,
+      X_seed, W, U, C, O, SD, SxH, D,
+      E_h_of_cell, Etiles_per_h, cell_r, cell_c,
+      species_info,
       universal_disp_thres, max_disp_steps, roi_cap,
-      LM,  row_first_land, row_last_land, col_first_land, col_last_land,
+      LM, row_first_land, row_last_land, col_first_land, col_last_land,
       n_h, n_s,
       dim_x, dim_y,
       alpha_scaled, beta_scaled, gamma_scaled,
@@ -380,41 +426,41 @@ Rcpp::List estimate_initial_temp_R(
   }
 }
 
-// ------------------ Thin wrapper: G only ------------------
-// [[Rcpp::export]]
-Rcpp::NumericVector compute_G_R(const Rcpp::NumericVector& X,
-                                      const Rcpp::NumericVector& E,
-                                      const Rcpp::NumericVector& SD,
-                                      const Rcpp::NumericVector& SxH,
-                                      const Rcpp::IntegerVector& D,
-                                      int n_h, int n_s, int dim_x, int dim_y,
-                                      int universal_disp_thres, int max_disp_steps,
-                                      int roi_cap,
-                                      const Rcpp::IntegerVector& LM,
-                                      const Rcpp::IntegerVector& row_first_land,
-                                      const Rcpp::IntegerVector& row_last_land,
-                                      const Rcpp::IntegerVector& col_first_land,
-                                      const Rcpp::IntegerVector& col_last_land)
-{
-  std::vector<double> Xv(X.begin(), X.end());
-  std::vector<double> Ev(E.begin(), E.end());
-  std::vector<double> SDv(SD.begin(), SD.end());
-  std::vector<double> SxHv(SxH.begin(), SxH.end());
-  std::vector<int>    Dv(D.begin(), D.end());
-  std::vector<uint8_t> LMv(LM.begin(), LM.end());  // implicit int -> uint8_t
-
-  // Land index vectors
-  std::vector<int> row_first_land_v(row_first_land.begin(), row_first_land.end());
-  std::vector<int> row_last_land_v (row_last_land.begin(),  row_last_land.end());
-  std::vector<int> col_first_land_v(col_first_land.begin(), col_first_land.end());
-  std::vector<int> col_last_land_v (col_last_land.begin(),  col_last_land.end());
-
-  std::vector<double> G = compute_G(Xv, Ev, SDv, SxHv, Dv,
-                                 n_h, n_s, dim_x, dim_y,
-                                 universal_disp_thres, max_disp_steps,
-                                 roi_cap, LMv,
-                                 row_first_land_v, row_last_land_v,
-                                 col_first_land_v, col_last_land_v);
-  return Rcpp::NumericVector(G.begin(), G.end());
-
-}
+// // ------------------ Thin wrapper: G only ------------------
+// // [[Rcpp::export]]
+// Rcpp::NumericVector compute_G_R(const Rcpp::NumericVector& X,
+//                                       const Rcpp::NumericVector& E,
+//                                       const Rcpp::NumericVector& SD,
+//                                       const Rcpp::NumericVector& SxH,
+//                                       const Rcpp::IntegerVector& D,
+//                                       int n_h, int n_s, int dim_x, int dim_y,
+//                                       int universal_disp_thres, int max_disp_steps,
+//                                       int roi_cap,
+//                                       const Rcpp::IntegerVector& LM,
+//                                       const Rcpp::IntegerVector& row_first_land,
+//                                       const Rcpp::IntegerVector& row_last_land,
+//                                       const Rcpp::IntegerVector& col_first_land,
+//                                       const Rcpp::IntegerVector& col_last_land)
+// {
+//   std::vector<double> Xv(X.begin(), X.end());
+//   std::vector<double> Ev(E.begin(), E.end());
+//   std::vector<double> SDv(SD.begin(), SD.end());
+//   std::vector<double> SxHv(SxH.begin(), SxH.end());
+//   std::vector<int>    Dv(D.begin(), D.end());
+//   std::vector<uint8_t> LMv(LM.begin(), LM.end());  // implicit int -> uint8_t
+//
+//   // Land index vectors
+//   std::vector<int> row_first_land_v(row_first_land.begin(), row_first_land.end());
+//   std::vector<int> row_last_land_v (row_last_land.begin(),  row_last_land.end());
+//   std::vector<int> col_first_land_v(col_first_land.begin(), col_first_land.end());
+//   std::vector<int> col_last_land_v (col_last_land.begin(),  col_last_land.end());
+//
+//   std::vector<double> G = compute_G(Xv, Ev, SDv, SxHv, Dv,
+//                                  n_h, n_s, dim_x, dim_y,
+//                                  universal_disp_thres, max_disp_steps,
+//                                  roi_cap, LMv,
+//                                  row_first_land_v, row_last_land_v,
+//                                  col_first_land_v, col_last_land_v);
+//   return Rcpp::NumericVector(G.begin(), G.end());
+//
+// }

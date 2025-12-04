@@ -3,6 +3,7 @@
 #include "sa_utils.h"
 #include "objective_utils.h"
 #include "update_candidate.h"
+#include "dispersal_utils.h"
 
 #include <random>
 #include <algorithm>
@@ -46,11 +47,15 @@ InitTempResult estimate_initial_temperature_benameur_cpp(
     const std::vector<double>& W,
     const std::vector<double>& U,
     const std::vector<double>& C,
-    const std::vector<double>& E,
     const std::vector<double>& O,
     const std::vector<double>& SD,
     const std::vector<double>& SxH,
     const std::vector<int>&    D,
+    const std::vector<int>& E_h_of_cell,
+    const std::vector<std::vector<std::size_t>>& Etiles_per_h,
+    const std::vector<int>&    cell_r,
+    const std::vector<int>&    cell_c,
+    const std::vector<SpeciesDispData>& species_info,
     int    universal_disp_thres,
     int    max_disp_steps,
     int    roi_cap,
@@ -99,14 +104,18 @@ InitTempResult estimate_initial_temperature_benameur_cpp(
   dpos.reserve(num_samples);
 
   // Initial
-  double E_base = compute_H(X_seed, C, E, O, SD, SxH, D,
+  double E_base = compute_H(X_seed, C, O, SxH, D,
                             alpha_scaled, beta_scaled, gamma_scaled,
-                            n_h, n_s, dim_x, dim_y,
-                            universal_disp_thres,
-                            max_disp_steps,
-                            roi_cap, LM,
+                            n_h, n_s,
+                            dim_x, dim_y,
+                            universal_disp_thres, max_disp_steps, roi_cap,
+                            LM,
                             row_first_land, row_last_land,
-                            col_first_land, col_last_land).H;
+                            col_first_land, col_last_land,
+                            E_h_of_cell,
+                            Etiles_per_h,
+                            cell_r, cell_c,
+                            species_info).H;
 
   const int max_tries = std::max(num_samples * max_tries_factor, 100);
   int tries = 0;
@@ -118,14 +127,18 @@ InitTempResult estimate_initial_temperature_benameur_cpp(
                                                 n_h, dim_x, dim_y);
     if (cand == X_seed) continue;
 
-    double E_cand = compute_H(cand, C, E, O, SD, SxH, D,
+    double E_cand = compute_H(X_seed, C, O, SxH, D,
                               alpha_scaled, beta_scaled, gamma_scaled,
-                              n_h, n_s, dim_x, dim_y,
-                              universal_disp_thres,
-                              max_disp_steps,
-                              roi_cap, LM,
+                              n_h, n_s,
+                              dim_x, dim_y,
+                              universal_disp_thres, max_disp_steps, roi_cap,
+                              LM,
                               row_first_land, row_last_land,
-                              col_first_land, col_last_land).H;
+                              col_first_land, col_last_land,
+                              E_h_of_cell,
+                              Etiles_per_h,
+                              cell_r, cell_c,
+                              species_info).H;
 
     const double dE = E_cand - E_base;
     if (dE > 0.0) {

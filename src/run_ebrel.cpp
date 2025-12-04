@@ -56,7 +56,10 @@ namespace {
 RunEBRELResult run_ebrel(const RunEBRELInput& in, const RunEBRELOptions& opt) {
   validate_shapes(in);
 
-  // --- X0: provided or generated ---
+  // ---- Number of grid cells ----
+  const int cells = static_cast<int>(n_cells(in.dim_x, in.dim_y));
+
+  // ---- X0: provided or generated ----
   std::vector<double> X0;
   if (!in.X0.empty()) {
     X0 = in.X0; // user-supplied
@@ -65,18 +68,60 @@ RunEBRELResult run_ebrel(const RunEBRELInput& in, const RunEBRELOptions& opt) {
                          opt.base_prob_X0, opt.rng_seed);
   };
 
+  // ---- Precompute row/col coords [TESTED in codePad & WORKS] ----
+  std::vector<int> cell_r(cells), cell_c(cells);
+  for (int k = 0; k < cells; ++k) {
+    cell_r[k] = static_cast<int>(k / static_cast<std::size_t>(in.dim_x));
+    cell_c[k] = static_cast<int>(k % static_cast<std::size_t>(in.dim_x));
+  }
+
+  // ---- One-hot habitat index per cell for E (-1 = none) [TESTED in codePad & WORKS] ----
+  std::vector<int> E_h_of_cell(cells, -1);
+  for (int h = 0; h < in.n_h; ++h) {
+    const std::size_t base = static_cast<std::size_t>(h) * cells;
+    for (int k = 0; k < cells; ++k) {
+      std::size_t kk = static_cast<std::size_t>(k);
+      if (in.E[base + kk] == 1.0) E_h_of_cell[k] = h;
+    }
+  }
+
+  // ---- Pre-compute Etiles for compute_F2 ----
+  std::vector<std::vector<std::size_t>> Etiles_per_h(in.n_h);
+  for (int tile = 0; tile < cells; ++tile) {
+    int h = E_h_of_cell[tile];
+    if (h >= 0) {
+      Etiles_per_h[static_cast<std::size_t>(h)].push_back(tile);
+    }
+  }
+
+  // --- Pre-compute species-specific dispersal information ---
+  std::vector<SpeciesDispData> species_info = precompute_species_data(
+      in.SD,
+      in.SxH,
+      in.D,
+      in.n_h,
+      in.n_s,
+      in.dim_x,
+      in.dim_y,
+      in.universal_disp_thres,
+      in.max_disp_steps,
+      in.roi_cap,
+      in.row_first_land,
+      in.row_last_land,
+      in.col_first_land,
+      in.col_last_land,
+      E_h_of_cell,
+      cell_r,
+      cell_c
+  );
+
   // --- Initial objectives (for scaling) ---
   const double F1 = compute_F1(X0, in.C, in.n_h, in.dim_x, in.dim_y);
-  const double F2 = compute_F2(X0, in.E, in.n_h, in.dim_x, in.dim_y);
+  const double F2 = compute_F2(X0, Etiles_per_h, in.n_h, in.dim_x, in.dim_y);
 
   // Use the same G variant as SA so scaling matches the run
-  std::vector<double> G_init;
-  G_init = compute_G(
+  std::vector<double> G_init = compute_G(
     X0,
-    in.E,
-    in.SD,
-    in.SxH,
-    in.D,
     in.n_h,
     in.n_s,
     in.dim_x,
@@ -88,8 +133,13 @@ RunEBRELResult run_ebrel(const RunEBRELInput& in, const RunEBRELOptions& opt) {
     in.row_first_land,
     in.row_last_land,
     in.col_first_land,
-    in.col_last_land
+    in.col_last_land,
+    cell_r,
+    cell_c,
+    E_h_of_cell,
+    species_info
   );
+
   const double G_sum = std::accumulate(G_init.begin(), G_init.end(), 0.0);
 
   // Safe rescaling
@@ -117,11 +167,14 @@ RunEBRELResult run_ebrel(const RunEBRELInput& in, const RunEBRELOptions& opt) {
     W,
     in.U,
     in.C,
-    in.E,
     in.O,
-    in.SD,
     in.SxH,
     in.D,
+    E_h_of_cell,
+    Etiles_per_h,
+    cell_r,
+    cell_c,
+    species_info,
     in.n_h,
     in.n_s,
     in.dim_x,

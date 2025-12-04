@@ -6,6 +6,7 @@
 #include <vector>
 #include <stdexcept>
 #include <cstdint>
+#include "dispersal_utils.h"
 
 // ------------------------------- Main functions ------------------------------
 
@@ -36,11 +37,14 @@ SAResult simulated_annealing(
     const std::vector<double>& W,     // size: n_cells * n_h (or your chosen layout)
     const std::vector<double>& U,     // size: n_cells * n_h
     const std::vector<double>& C,     // per compute_H
-    const std::vector<double>& E,     // per compute_H
     const std::vector<double>& O,     // per compute_H
-    const std::vector<double>& SD,    // per compute_H
     const std::vector<double>& SxH,   // flattened matrix for compute_H
     const std::vector<int>& D,        // dispersal thresholds, etc.
+    const std::vector<int>& E_h_of_cell, // one-hot encoded E
+    const std::vector<std::vector<std::size_t>>& Etiles_per_h, // lookup Etiles
+    const std::vector<int>& cell_r, // rows indexes
+    const std::vector<int>& cell_c, // cols indexes
+    const std::vector<SpeciesDispData>& species_info, // Species dispersal info e.g. ROI
     int n_h,                          // number of habitats/classes per cell
     int n_s,                          // number of species/features
     int dim_x,                        // X dimension (e.g. longitude or easting)
@@ -48,11 +52,11 @@ SAResult simulated_annealing(
     int universal_disp_thres,         // threshold after which universal dispersal is assumed
     int max_disp_steps,               // limit for dispersal as D[sp] x universal_disp_thres
     int roi_cap,                      // ROI cap in cells (upper limit for D[sp] x universal_disp_thres)
-    const std::vector<uint8_t>& LM,
-    const std::vector<int>& row_first_land,
-    const std::vector<int>& row_last_land,
-    const std::vector<int>& col_first_land,
-    const std::vector<int>& col_last_land,
+    const std::vector<uint8_t>& LM, // Land mask
+    const std::vector<int>& row_first_land, // Vector of first land index per row
+    const std::vector<int>& row_last_land, // vector of last land index per row
+    const std::vector<int>& col_first_land, // vector of first land index per col
+    const std::vector<int>& col_last_land, // vector of last land index per col
     double alpha_scaled,              // scaling on targets
     double beta_scaled,               // scaling on spatial aggregation
     double gamma_scaled,              // scaling on cost
