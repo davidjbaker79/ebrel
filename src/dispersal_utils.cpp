@@ -37,9 +37,110 @@ namespace {
     return off;
   }
 
+  // distance in grid cells (Chebyshev) between two seed cells
+  inline int cheb_dist_cells(int r1, int c1, int r2, int c2) {
+    int dr = std::abs(r1 - r2);
+    int dc = std::abs(c1 - c2);
+    return (dr > dc ? dr : dc);
+  }
+
 }
 
 //------------------------- G Function -----------------------------------------
+
+// Cluster seeds by proximity: any two seeds with Chebyshev distance <= gap_cells
+// are connected in the same cluster.
+static std::vector<Fragment> cluster_seeds_with_gap(
+    const std::vector<int>& seed_cells,   // global cell indices
+    const std::vector<int>& cell_r,
+    const std::vector<int>& cell_c,
+    int dim_y, int dim_x,
+    int gap_cells,
+    int R,
+    const std::vector<int>& row_first_land,
+    const std::vector<int>& row_last_land,
+    const std::vector<int>& col_first_land,
+    const std::vector<int>& col_last_land
+) {
+  const int N = static_cast<int>(seed_cells.size());
+  std::vector<Fragment> fragments;
+  if (N == 0) return fragments;
+
+  std::vector<uint8_t> visited(N, 0u);
+
+  for (int i = 0; i < N; ++i) {
+    if (visited[i]) continue;
+
+    Fragment F;
+    F.seed_idxs.clear();
+    F.seed_idxs.reserve(64);
+
+    int min_r = dim_y, max_r = -1;
+    int min_c = dim_x, max_c = -1;
+
+    // BFS/DFS over seed index graph
+    std::vector<int> stack;
+    stack.reserve(64);
+    stack.push_back(i);
+    visited[i] = 1u;
+
+    while (!stack.empty()) {
+      int idx = stack.back();
+      stack.pop_back();
+
+      int cell = seed_cells[idx];
+      F.seed_idxs.push_back(static_cast<std::size_t>(cell));
+
+      int r = cell_r[cell];
+      int c = cell_c[cell];
+
+      if (r < min_r) min_r = r;
+      if (r > max_r) max_r = r;
+      if (c < min_c) min_c = c;
+      if (c > max_c) max_c = c;
+
+      // check all other seeds for proximity
+      for (int j = 0; j < N; ++j) {
+        if (visited[j]) continue;
+        int cell_j = seed_cells[j];
+        int rj = cell_r[cell_j];
+        int cj = cell_c[cell_j];
+
+        if (cheb_dist_cells(r, c, rj, cj) <= gap_cells) {
+          visited[j] = 1u;
+          stack.push_back(j);
+        }
+      }
+    }
+
+    if (F.seed_idxs.empty()) continue;
+
+    // Expand bbox by R and clip to land spans
+    int r0 = std::max(0,         min_r - R);
+    int r1 = std::min(dim_y - 1, max_r + R);
+    int c0 = std::max(0,         min_c - R);
+    int c1 = std::min(dim_x - 1, max_c + R);
+
+    // vertical tightening
+    while (r0 <= r1 && (row_last_land[r0] < c0 || row_first_land[r0] > c1)) ++r0;
+    while (r1 >= r0 && (row_last_land[r1] < c0 || row_first_land[r1] > c1)) --r1;
+    if (r0 > r1) continue; // no land
+
+    // horizontal tightening
+    while (c0 <= c1 && (col_last_land[c0] < r0 || col_first_land[c0] > r1)) ++c0;
+    while (c1 >= c0 && (col_last_land[c1] < r0 || col_first_land[c1] > r1)) --c1;
+    if (c0 > c1) continue; // no land
+
+    F.r0 = r0;
+    F.r1 = r1;
+    F.c0 = c0;
+    F.c1 = c1;
+
+    fragments.push_back(std::move(F));
+  }
+
+  return fragments;
+}
 
 /* Pre-compute the species-specific dispersal information needed within
  * compute_G that remains constant across iterations */
@@ -58,11 +159,16 @@ std::vector<SpeciesDispData> precompute_species_data(
     const std::vector<int>& col_last_land,
     const std::vector<int>& E_h_of_cell,
     const std::vector<int>& cell_r,
-    const std::vector<int>& cell_c
+    const std::vector<int>& cell_c,
+    int cluster_gap_cells
 ) {
 
   const int cells = n_cells(dim_x, dim_y);
   std::vector<SpeciesDispData> out(n_s);
+
+  // parameter: max gap (in grid cells) allowed within a cluster
+  const int gap_cells = cluster_gap_cells;
+
 
   for (int sp = 0; sp < n_s; ++sp) {
 
@@ -82,9 +188,16 @@ std::vector<SpeciesDispData> precompute_species_data(
 
     // --- Seeds + bbox
     const std::size_t base_sd = static_cast<std::size_t>(sp) * static_cast<std::size_t>(cells);
-    int min_r = dim_y, max_r = -1, min_c = dim_x, max_c = -1;
+    //int min_r = dim_y, max_r = -1, min_c = dim_x, max_c = -1;
 
+    // collect seeds
+    std::vector<int> seed_cells;
+    seed_cells.reserve(256);
     S.seed_idxs.clear();
+
+    int global_min_r = dim_y, global_max_r = -1;
+    int global_min_c = dim_x, global_max_c = -1;
+
     for (int k = 0; k < cells; ++k) {
 
       std::size_t kk = static_cast<std::size_t>(k);
@@ -95,14 +208,15 @@ std::vector<SpeciesDispData> precompute_species_data(
       //const int ehx = E_h_of_cell[k]; // precomputed once
       //if (ehx == -1 || !S.suitable_h_flag[ehx]) continue;
 
+      seed_cells.push_back(k);
       S.seed_idxs.push_back(kk);
 
       const int r = cell_r[k];
       const int c = cell_c[k];
-      if (r < min_r) min_r = r;
-      if (r > max_r) max_r = r;
-      if (c < min_c) min_c = c;
-      if (c > max_c) max_c = c;
+      if (r < global_min_r) global_min_r = r;
+      if (r > global_max_r) global_max_r = r;
+      if (c < global_min_c) global_min_c = c;
+      if (c > global_max_c) global_max_c = c;
 
     }
 
@@ -111,38 +225,38 @@ std::vector<SpeciesDispData> precompute_species_data(
       continue; // inactive species
     }
 
+    S.r0 = global_min_r;
+    S.r1 = global_max_r;
+    S.c0 = global_min_c;
+    S.c1 = global_max_c;
+
     // ROI expansion (depends only on disp_raw, max_disp_steps, roi_cap)
     const int R_raw = (max_disp_steps > 0)
       ? (S.disp_raw * max_disp_steps)
       : std::max(dim_x, dim_y);
     const int R = std::min(R_raw, roi_cap);
 
-    int r0 = std::max(0,         min_r - R);
-    int r1 = std::min(dim_y - 1, max_r + R);
-    int c0 = std::max(0,         min_c - R);
-    int c1 = std::min(dim_x - 1, max_c + R);
+    // cluster seeds by proximity (allow gap_cells)
+    S.fragments = cluster_seeds_with_gap(
+      seed_cells,
+      cell_r, cell_c,
+      dim_y, dim_x,
+      gap_cells,
+      R,
+      row_first_land, row_last_land,
+      col_first_land, col_last_land
+    );
 
-    // Clip ROI using land spans – exactly as in your function
-    while (r0 <= r1 && (row_last_land[r0] < c0 || row_first_land[r0] > c1)) ++r0;
-    while (r1 >= r0 && (row_last_land[r1] < c0 || row_first_land[r1] > c1)) --r1;
-    if (r0 > r1) {
+    if (S.fragments.empty()) {
       out[sp] = std::move(S);
       continue;
     }
-
-    while (c0 <= c1 && (col_last_land[c0] < r0 || col_first_land[c0] > r1)) ++c0;
-    while (c1 >= c0 && (col_last_land[c1] < r0 || col_first_land[c1] > r1)) --c1;
-    if (c0 > c1) {
-      out[sp] = std::move(S);
-      continue;
-    }
-
-    S.r0 = r0; S.r1 = r1; S.c0 = c0; S.c1 = c1;
 
     S.use_fast_path = (S.disp_raw >= universal_disp_thres);
-    S.active = true;
+    S.active        = true;
 
     out[sp] = std::move(S);
+
   }
   return out;
 }
@@ -171,7 +285,7 @@ std::vector<double> compute_G(
   const int cells = n_cells(dim_x, dim_y);
   std::vector<double> result(n_s, 0.0);
 
-  // offsets cache (you *can* precompute this once and pass in too if desired)
+  // offsets cache (could precompute this once and pass in)
   std::vector<std::vector<std::pair<int,int>>> offsets_cache(universal_disp_thres + 1);
   for (int d = 0; d <= universal_disp_thres; ++d) {
     offsets_cache[d] = make_offsets(d);
@@ -207,205 +321,219 @@ std::vector<double> compute_G(
   for (int sp = 0; sp < n_s; ++sp) {
 
     const SpeciesDispData& S = species_info[sp];
-    if (!S.active) {
+    if (!S.active || S.fragments.empty()) {
       result[sp] = 0.0;
       continue;
     }
 
-    //const int disp_raw = S.disp_raw;
     const int disp = S.disp;
-
-    const int r0 = S.r0;
-    const int r1 = S.r1;
-    const int c0 = S.c0;
-    const int c1 = S.c1;
-
-    const int W = c1 - c0 + 1;
-    const int H = r1 - r0 + 1;
-    const std::size_t Nroi =
-      static_cast<std::size_t>(W) * static_cast<std::size_t>(H);
-
-    if (Nroi > transit.capacity()) {
-      transit.reserve(Nroi);
-      habitat.reserve(Nroi);
-      steps.reserve(Nroi);
-    }
-    transit.resize(Nroi);
-    habitat.resize(Nroi);
-    steps.resize(Nroi);
-
-    frontier.clear(); next.clear();
-    frontier.reserve(Nroi); next.reserve(Nroi);
-
     const auto& suitable_h_flag = S.suitable_h_flag;
+    const auto& offsets = offsets_cache[disp];
 
-    // fast path: effectively global dispersal for this species
+    double g_sp = 0.0;  // accumulate across fragments
+
+    // ---- Fast path: effectively global dispersal (no BFS), per-fragment ----
     if (S.use_fast_path) {
-      double total = 0.0;
-      for (int r = r0; r <= r1; ++r) {
-        std::size_t g =
-          static_cast<std::size_t>(r) * static_cast<std::size_t>(dim_x)
-        + static_cast<std::size_t>(c0);
-        for (int c = c0; c <= c1; ++c, ++g) {
-          if (!LM[g]) continue;
-          const int hx = X_h_of_cell[g];
-          if (hx != -1 && suitable_h_flag[hx]) {
-            total += 1.0;
+      for (const Fragment& F : S.fragments) {
+        const int r0 = F.r0;
+        const int r1 = F.r1;
+        const int c0 = F.c0;
+        const int c1 = F.c1;
+
+        for (int r = r0; r <= r1; ++r) {
+          std::size_t g =
+            static_cast<std::size_t>(r) * static_cast<std::size_t>(dim_x)
+          + static_cast<std::size_t>(c0);
+          for (int c = c0; c <= c1; ++c, ++g) {
+            if (!LM[g]) continue;
+            const int hx = X_h_of_cell[g];
+            if (hx != -1 && suitable_h_flag[hx]) {
+              g_sp += 1.0;
+            }
           }
         }
       }
-      result[sp] = total;
+      result[sp] = g_sp;
       continue;
     }
 
-    // Build transit/habitat masks within ROI
-    std::size_t roiH = 0;
-    for (int r = r0; r <= r1; ++r) {
-      const std::size_t rowOff =
-        static_cast<std::size_t>(r - r0) * static_cast<std::size_t>(W);
+    // ---- Normal path: BFS per fragment ----
+    for (const Fragment& F : S.fragments) {
 
-      if (row_last_land[r] < c0 || row_first_land[r] > c1) {
-        // whole row is sea in this ROI
+      const int r0 = F.r0;
+      const int r1 = F.r1;
+      const int c0 = F.c0;
+      const int c1 = F.c1;
+
+      const int W = c1 - c0 + 1;
+      const int H = r1 - r0 + 1;
+      const std::size_t Nroi =
+        static_cast<std::size_t>(W) * static_cast<std::size_t>(H);
+
+      // ensure scratch big enough for this fragment
+      if (Nroi > transit.capacity()) {
+        transit.reserve(Nroi);
+        habitat.reserve(Nroi);
+        steps.reserve(Nroi);
+      }
+      transit.resize(Nroi);
+      habitat.resize(Nroi);
+      steps.resize(Nroi);
+
+      frontier.clear();
+      next.clear();
+      frontier.reserve(Nroi);
+      next.reserve(Nroi);
+
+      // Build transit/habitat masks within this fragment ROI
+      std::size_t roiH = 0;
+      for (int r = r0; r <= r1; ++r) {
+        const std::size_t rowOff =
+          static_cast<std::size_t>(r - r0) * static_cast<std::size_t>(W);
+
+        if (row_last_land[r] < c0 || row_first_land[r] > c1) {
+          // whole row is sea in this ROI
+          std::fill_n(&habitat[rowOff], W, 0u);
+          std::fill_n(&transit[rowOff], W, 0u);
+          continue;
+        }
+
         std::fill_n(&habitat[rowOff], W, 0u);
         std::fill_n(&transit[rowOff], W, 0u);
-        // no need to touch steps: they will never be used in this row
-        continue;
-      }
+        // steps[] will be initialised only where transit==1
 
-      std::fill_n(&habitat[rowOff], W, 0u);
-      std::fill_n(&transit[rowOff], W, 0u);
-      // note: we will initialise steps[] only where transit==1
+        const int cc0 = std::max(c0, row_first_land[r]);
+        const int cc1 = std::min(c1, row_last_land[r]);
 
-      const int cc0 = std::max(c0, row_first_land[r]);
-      const int cc1 = std::min(c1, row_last_land[r]);
+        std::size_t g =
+          static_cast<std::size_t>(r) * static_cast<std::size_t>(dim_x)
+          + static_cast<std::size_t>(cc0);
 
-      std::size_t g =
-        static_cast<std::size_t>(r) * static_cast<std::size_t>(dim_x)
-        + static_cast<std::size_t>(cc0);
+        std::size_t idx = rowOff + static_cast<std::size_t>(cc0 - c0);
 
-      std::size_t idx = rowOff + static_cast<std::size_t>(cc0 - c0);
+        for (int c = cc0; c <= cc1; ++c, ++idx, ++g) {
 
-      for (int c = cc0; c <= cc1; ++c, ++idx, ++g) {
+          uint8_t hmask = 0u;
+          uint8_t tmask = 0u;
 
-        uint8_t hmask = 0u;
-        uint8_t tmask = 0u;
-
-        const int hx = X_h_of_cell[g];
-        if (hx != -1 && suitable_h_flag[hx]) {
-          hmask = 1u;
-          tmask = 1u; // X counts as transit too
-        }
-        if (!tmask) {
-          const int he = E_h_of_cell[g];
-          if (he != -1 && suitable_h_flag[he]) {
-            tmask = 1u; // suitable E as transit only
+          const int hx = X_h_of_cell[g];
+          if (hx != -1 && suitable_h_flag[hx]) {
+            hmask = 1u;
+            tmask = 1u; // X counts as transit too
           }
-        }
-
-        habitat[idx] = hmask;
-        transit[idx] = tmask;
-
-        if (tmask) {
-          steps[idx] = STEP_MAX;  // initialise steps *only* for transit cells
-        }
-
-        roiH += hmask;
-      }
-    }
-
-    if (roiH == 0) {
-      result[sp] = 0.0;
-      continue;
-    }
-
-    // Seed frontier
-    frontier.clear();
-    for (std::size_t k : S.seed_idxs) {
-      const int r = cell_r[k];
-      const int c = cell_c[k];
-      if (r < r0 || r > r1 || c < c0 || c > c1) continue;
-
-      const std::size_t idx =
-        static_cast<std::size_t>(r - r0) * static_cast<std::size_t>(W)
-        + static_cast<std::size_t>(c - c0);
-
-      const std::size_t g =
-      static_cast<std::size_t>(r) * static_cast<std::size_t>(dim_x)
-        + static_cast<std::size_t>(c);
-
-      if (!LM[g]) continue;
-      if (!transit[idx]) continue;
-      if (steps[idx] == 0) continue;
-
-      steps[idx] = 0;
-      frontier.push_back(idx);
-    }
-
-    if (frontier.empty()) {
-      result[sp] = 0.0;
-      continue;
-    }
-
-    // BFS with on-the-fly counting and early exit
-    const auto& offsets = offsets_cache[disp];
-    double g_sp = 0.0;
-    std::size_t remaining = roiH;
-
-    for (step_t d = 0;
-         !frontier.empty() &&
-           (max_disp_steps <= 0 || d < static_cast<step_t>(max_disp_steps));
-         ++d)
-    {
-      next.clear();
-
-      for (std::size_t i : frontier) {
-
-        const std::size_t row = i / static_cast<std::size_t>(W);
-        const std::size_t col = i - row * static_cast<std::size_t>(W);
-        const int r = r0 + static_cast<int>(row);
-        const int c = c0 + static_cast<int>(col);
-
-        for (const auto& off : offsets) {
-          const int nr = r + off.first;
-          const int nc = c + off.second;
-
-          if (static_cast<unsigned>(nr - r0) >= static_cast<unsigned>(H) ||
-              static_cast<unsigned>(nc - c0) >= static_cast<unsigned>(W)) {
-            continue;
-          }
-
-          const std::size_t j =
-            static_cast<std::size_t>(nr - r0) * static_cast<std::size_t>(W)
-            + static_cast<std::size_t>(nc - c0);
-
-          if (!transit[j]) continue;
-
-          const step_t next_step = static_cast<step_t>(d + 1);
-          if (steps[j] <= next_step) continue;
-
-          steps[j] = next_step;
-
-          if (habitat[j]) {
-            g_sp += 1.0;
-            if (--remaining == 0) {
-              // all reachable habitat counted; can stop BFS
-              frontier.clear();
-              break;
+          if (!tmask) {
+            const int he = E_h_of_cell[g];
+            if (he != -1 && suitable_h_flag[he]) {
+              tmask = 1u; // suitable E as transit only
             }
           }
 
-          next.push_back(j);
-        }
+          habitat[idx] = hmask;
+          transit[idx] = tmask;
 
-        if (frontier.empty()) break; // early break from outer loop too
+          if (tmask) {
+            steps[idx] = STEP_MAX;  // initialise steps only for transit cells
+          }
+
+          roiH += hmask;
+        }
       }
 
-      frontier.swap(next);
-    }
+      if (roiH == 0) {
+        // no newly created suitable habitat in this fragment
+        continue;
+      }
+
+      // Seed frontier from this fragment's seeds only
+      frontier.clear();
+      for (std::size_t k : F.seed_idxs) {
+        const int r = cell_r[static_cast<int>(k)];
+        const int c = cell_c[static_cast<int>(k)];
+
+        // should always be true by construction, but cheap guards:
+        if (r < r0 || r > r1 || c < c0 || c > c1) continue;
+
+        const std::size_t idx =
+          static_cast<std::size_t>(r - r0) * static_cast<std::size_t>(W)
+          + static_cast<std::size_t>(c - c0);
+
+        const std::size_t g =
+        static_cast<std::size_t>(r) * static_cast<std::size_t>(dim_x)
+          + static_cast<std::size_t>(c);
+
+        if (!LM[g])      continue;
+        if (!transit[idx]) continue;
+        if (steps[idx] == 0) continue;
+
+        steps[idx] = 0;
+        frontier.push_back(idx);
+      }
+
+      if (frontier.empty()) {
+        // this fragment has no usable seeds (e.g. all on sea / non-transit)
+        continue;
+      }
+
+      // BFS with on-the-fly counting and early exit *within this fragment*
+      std::size_t remaining = roiH;
+
+      for (step_t d = 0;
+           !frontier.empty() &&
+             (max_disp_steps <= 0 || d < static_cast<step_t>(max_disp_steps));
+           ++d)
+      {
+        next.clear();
+
+        for (std::size_t i : frontier) {
+
+          const std::size_t row = i / static_cast<std::size_t>(W);
+          const std::size_t col = i - row * static_cast<std::size_t>(W);
+          const int r = r0 + static_cast<int>(row);
+          const int c = c0 + static_cast<int>(col);
+
+          for (const auto& off : offsets) {
+            const int nr = r + off.first;
+            const int nc = c + off.second;
+
+            if (static_cast<unsigned>(nr - r0) >= static_cast<unsigned>(H) ||
+                static_cast<unsigned>(nc - c0) >= static_cast<unsigned>(W)) {
+              continue;
+            }
+
+            const std::size_t j =
+              static_cast<std::size_t>(nr - r0) * static_cast<std::size_t>(W)
+              + static_cast<std::size_t>(nc - c0);
+
+            if (!transit[j]) continue;
+
+            const step_t next_step = static_cast<step_t>(d + 1);
+            if (steps[j] <= next_step) continue;
+
+            steps[j] = next_step;
+
+            if (habitat[j]) {
+              g_sp += 1.0;
+              if (--remaining == 0) {
+                // all reachable habitat counted in this fragment
+                frontier.clear();
+                break;
+              }
+            }
+
+            next.push_back(j);
+          }
+
+          if (frontier.empty()) break; // early break from outer loop too
+        }
+
+        frontier.swap(next);
+      }
+      // end BFS for this fragment
+    } // end loop over fragments
+
     result[sp] = g_sp;
-  }
+  } // end species loop
   } // end omp parallel
 
   return result;
 }
-

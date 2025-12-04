@@ -43,6 +43,7 @@ struct RunEBRELInput {
   int universal_disp_thres = 20;
   int max_disp_steps = 10;
   int roi_cap  = 100;
+  int cluster_gap_cells = 25;
   double alpha = 1.0;
   double beta = 25.0;
   double gamma = 100.0;

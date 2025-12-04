@@ -112,7 +112,8 @@ RunEBRELResult run_ebrel(const RunEBRELInput& in, const RunEBRELOptions& opt) {
       in.col_last_land,
       E_h_of_cell,
       cell_r,
-      cell_c
+      cell_c,
+      in.cluster_gap_cells
   );
 
   // --- Initial objectives (for scaling) ---

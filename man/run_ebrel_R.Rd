@@ -10,6 +10,7 @@ run_ebrel_R(
   universal_disp_thres = 50,
   max_disp_steps = 30,
   roi_cap = 200,
+  cluster_gap_cells = 25,
   alpha = 1,
   beta = 25,
   gamma = 100,

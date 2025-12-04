@@ -6,6 +6,12 @@
 #include <vector>
 #include <cstdint>
 
+// Structure for storing fragment of ROI
+struct Fragment {
+  int r0, r1, c0, c1;                  // ROI bounds for this fragment
+  std::vector<std::size_t> seed_idxs;  // seeds (global cell indices)
+};
+
 /* Precalculate information on dispersal for each species */
 struct SpeciesDispData {
   bool active;                // false if no seeds or ROI empty
@@ -15,6 +21,8 @@ struct SpeciesDispData {
   std::vector<uint8_t> suitable_h_flag; // size n_h: 0/1
   // Seeds (global cell indices) satisfying SD==1 && E suitable
   std::vector<std::size_t> seed_idxs;
+  // Collect the ROI fragments
+  std::vector<Fragment>    fragments;   // per-fragment ROIs
   // ROI bounds for this species (clipped to land)
   int r0, r1, c0, c1;         // inclusive bounds
   // Fast path flag: use "global dispersal" branch only
@@ -37,7 +45,8 @@ std::vector<SpeciesDispData> precompute_species_data(
     const std::vector<int>& col_last_land,
     const std::vector<int>& E_h_of_cell,
     const std::vector<int>& cell_r,
-    const std::vector<int>& cell_c
+    const std::vector<int>& cell_c,
+    int cluster_gap_cells
 );
 
 /* Function to calculate G accounting for dispersal through the landscape of habitat patches

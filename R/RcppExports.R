@@ -5,16 +5,16 @@ create_ebrel_class_object_R <- function(E, C, SD, D, SxH, O, LM, dim_x, dim_y, n
     .Call(`_ebrel_create_ebrel_class_object_R`, E, C, SD, D, SxH, O, LM, dim_x, dim_y, n_h, n_s, sentinel, sigma)
 }
 
-run_ebrel_R <- function(ebrel_obj, X0 = NULL, base_prob_X0 = 0.85, sigma = 0.05, universal_disp_thres = 20L, max_disp_steps = 10L, roi_cap = 100L, alpha = 1.0, beta = 25.0, gamma = 100.0, step_proportion = 0.05, step_probability = 0.05, n_iterations = 10000L, temp = 1000.0, cooling_rate_c = 1.0, lam_enabled = FALSE, lam_target_mid = 0.44, lam_target_final = 0.05, lam_hold_frac = 0.60, lam_p = 2.0, min_iterations = 1000L, acceptance_window = 1000L, acceptance_thres = 0.01, iter_no_improve = 1000L, improve_eps = 1e-6, seed = NULL, verbose = FALSE) {
-    .Call(`_ebrel_run_ebrel_R`, ebrel_obj, X0, base_prob_X0, sigma, universal_disp_thres, max_disp_steps, roi_cap, alpha, beta, gamma, step_proportion, step_probability, n_iterations, temp, cooling_rate_c, lam_enabled, lam_target_mid, lam_target_final, lam_hold_frac, lam_p, min_iterations, acceptance_window, acceptance_thres, iter_no_improve, improve_eps, seed, verbose)
+run_ebrel_R <- function(ebrel_obj, X0 = NULL, base_prob_X0 = 0.85, sigma = 0.05, universal_disp_thres = 20L, max_disp_steps = 10L, roi_cap = 100L, cluster_gap_cells = 25L, alpha = 1.0, beta = 25.0, gamma = 100.0, step_proportion = 0.05, step_probability = 0.05, n_iterations = 10000L, temp = 1000.0, cooling_rate_c = 1.0, lam_enabled = FALSE, lam_target_mid = 0.44, lam_target_final = 0.05, lam_hold_frac = 0.60, lam_p = 2.0, min_iterations = 1000L, acceptance_window = 1000L, acceptance_thres = 0.01, iter_no_improve = 1000L, improve_eps = 1e-6, seed = NULL, verbose = FALSE) {
+    .Call(`_ebrel_run_ebrel_R`, ebrel_obj, X0, base_prob_X0, sigma, universal_disp_thres, max_disp_steps, roi_cap, cluster_gap_cells, alpha, beta, gamma, step_proportion, step_probability, n_iterations, temp, cooling_rate_c, lam_enabled, lam_target_mid, lam_target_final, lam_hold_frac, lam_p, min_iterations, acceptance_window, acceptance_thres, iter_no_improve, improve_eps, seed, verbose)
 }
 
 generate_X0_A_R <- function(U, n_h, dim_x, dim_y, base_prob, seed) {
     .Call(`_ebrel_generate_X0_A_R`, U, n_h, dim_x, dim_y, base_prob, seed)
 }
 
-estimate_initial_temp_R <- function(ebrel_obj, X0 = NULL, base_prob_X0 = 0.85, universal_disp_thres = 20L, max_disp_steps = 10L, roi_cap = 100L, alpha = 1.0, beta = 25.0, gamma = 100.0, step_proportion = 0.05, step_probability = 0.05, num_samples = 400L, chi0 = 0.8, p = 2.0, tol_logchi = 1e-3, max_iters = 50L, T1 = NULL, max_tries_factor = 50L, sigma = 0.05, seed = NULL, verbose = FALSE) {
-    .Call(`_ebrel_estimate_initial_temp_R`, ebrel_obj, X0, base_prob_X0, universal_disp_thres, max_disp_steps, roi_cap, alpha, beta, gamma, step_proportion, step_probability, num_samples, chi0, p, tol_logchi, max_iters, T1, max_tries_factor, sigma, seed, verbose)
+estimate_initial_temp_R <- function(ebrel_obj, X0 = NULL, base_prob_X0 = 0.85, universal_disp_thres = 20L, max_disp_steps = 10L, roi_cap = 100L, cluster_gap_cells = 25L, alpha = 1.0, beta = 25.0, gamma = 100.0, step_proportion = 0.05, step_probability = 0.05, num_samples = 400L, chi0 = 0.8, p = 2.0, tol_logchi = 1e-3, max_iters = 50L, T1 = NULL, max_tries_factor = 50L, sigma = 0.05, seed = NULL, verbose = FALSE) {
+    .Call(`_ebrel_estimate_initial_temp_R`, ebrel_obj, X0, base_prob_X0, universal_disp_thres, max_disp_steps, roi_cap, cluster_gap_cells, alpha, beta, gamma, step_proportion, step_probability, num_samples, chi0, p, tol_logchi, max_iters, T1, max_tries_factor, sigma, seed, verbose)
 }
 
 ebrel_omp_thread_limit <- function() {

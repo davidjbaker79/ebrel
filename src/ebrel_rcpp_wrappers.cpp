@@ -102,6 +102,7 @@ Rcpp::List run_ebrel_R(
     int universal_disp_thres = 20,
     int max_disp_steps       = 10,
     int roi_cap             = 100,
+    int cluster_gap_cells   = 25,
     double alpha            = 1.0,
     double beta             = 25.0,
     double gamma            = 100.0,
@@ -160,6 +161,7 @@ Rcpp::List run_ebrel_R(
     in.universal_disp_thres = universal_disp_thres;
     in.max_disp_steps   = max_disp_steps;
     in.roi_cap          = roi_cap;
+    in.cluster_gap_cells = cluster_gap_cells;
 
     Rcpp::IntegerVector LM_r = ebrel_obj["LM"];
     in.LM.assign(LM_r.begin(), LM_r.end());
@@ -250,6 +252,7 @@ Rcpp::List estimate_initial_temp_R(
     int    universal_disp_thres = 20,
     int    max_disp_steps    = 10,
     int    roi_cap           = 100,
+    int    cluster_gap_cells = 25,
     double alpha            = 1.0,
     double beta             = 25.0,
     double gamma            = 100.0,
@@ -357,7 +360,8 @@ Rcpp::List estimate_initial_temp_R(
       row_first_land, row_last_land,
       col_first_land, col_last_land,
       E_h_of_cell,
-      cell_r, cell_c
+      cell_r, cell_c,
+      cluster_gap_cells
     );
 
     // initial objective function evaluations and scaling as per run_ebrel function
@@ -425,42 +429,3 @@ Rcpp::List estimate_initial_temp_R(
     Rcpp::stop("Unknown error in estimate_initial_temp_R");
   }
 }
-
-// // ------------------ Thin wrapper: G only ------------------
-// // [[Rcpp::export]]
-// Rcpp::NumericVector compute_G_R(const Rcpp::NumericVector& X,
-//                                       const Rcpp::NumericVector& E,
-//                                       const Rcpp::NumericVector& SD,
-//                                       const Rcpp::NumericVector& SxH,
-//                                       const Rcpp::IntegerVector& D,
-//                                       int n_h, int n_s, int dim_x, int dim_y,
-//                                       int universal_disp_thres, int max_disp_steps,
-//                                       int roi_cap,
-//                                       const Rcpp::IntegerVector& LM,
-//                                       const Rcpp::IntegerVector& row_first_land,
-//                                       const Rcpp::IntegerVector& row_last_land,
-//                                       const Rcpp::IntegerVector& col_first_land,
-//                                       const Rcpp::IntegerVector& col_last_land)
-// {
-//   std::vector<double> Xv(X.begin(), X.end());
-//   std::vector<double> Ev(E.begin(), E.end());
-//   std::vector<double> SDv(SD.begin(), SD.end());
-//   std::vector<double> SxHv(SxH.begin(), SxH.end());
-//   std::vector<int>    Dv(D.begin(), D.end());
-//   std::vector<uint8_t> LMv(LM.begin(), LM.end());  // implicit int -> uint8_t
-//
-//   // Land index vectors
-//   std::vector<int> row_first_land_v(row_first_land.begin(), row_first_land.end());
-//   std::vector<int> row_last_land_v (row_last_land.begin(),  row_last_land.end());
-//   std::vector<int> col_first_land_v(col_first_land.begin(), col_first_land.end());
-//   std::vector<int> col_last_land_v (col_last_land.begin(),  col_last_land.end());
-//
-//   std::vector<double> G = compute_G(Xv, Ev, SDv, SxHv, Dv,
-//                                  n_h, n_s, dim_x, dim_y,
-//                                  universal_disp_thres, max_disp_steps,
-//                                  roi_cap, LMv,
-//                                  row_first_land_v, row_last_land_v,
-//                                  col_first_land_v, col_last_land_v);
-//   return Rcpp::NumericVector(G.begin(), G.end());
-//
-// }

@@ -11,6 +11,7 @@ estimate_initial_temp_R(
   universal_disp_thres = 10,
   max_disp_steps = 10,
   roi_cap = 100,
+  cluster_gap_cells = 25,
   alpha = 1,
   beta = 25,
   gamma = 100,
