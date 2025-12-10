@@ -113,7 +113,6 @@
 #' }
 #'
 #' @export
-dim_x = 45; dim_y = 55
 simulate_ebrel_spatial_data <- function(
     dim_x,
     dim_y,
@@ -364,7 +363,7 @@ simulate_ebrel_spatial_data <- function(
 #'
 #' @importFrom gstat vgm gstat
 #' @importFrom terra rast values app setValues which.max ifel global minmax ncell names
-#' @export
+#' @noRd
 .generate_habitat_rast <- function(dim_x = 50, dim_y = 50, n_h = 4,
                                   unavail_hab_prop = 0.1, prop_sea = 0.2) {
 

@@ -16,9 +16,7 @@
 #include <numeric>
 #include <cmath>
 #include <vector>
-
 #include <cstdint>
-
 #include <queue>
 
 using namespace Rcpp;
