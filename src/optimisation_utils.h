@@ -4,6 +4,7 @@
 #define OPTIMISATION_UTILS_H
 
 #include <vector>
+#include <chrono>
 
 /**
  * Compute distance–decay weights W for each (cell, habitat).
@@ -33,5 +34,10 @@ std::vector<double> compute_distance_weights(
     int dim_y,
     double sigma
 );
+
+inline double ms_since(const std::chrono::steady_clock::time_point& t0) {
+  using namespace std::chrono;
+  return duration_cast<duration<double, std::milli>>(steady_clock::now() - t0).count();
+}
 
 #endif // OPTIMISATION_UTILS_H
