@@ -73,6 +73,10 @@ struct RunEBRELResult {
   int    proposals = 0;                // total evaluated proposals (attempted_total)
   int    accepted  = 0;                // total accepted proposals
   double overall_acc = std::numeric_limits<double>::quiet_NaN(); // accepted/proposals
+  // --- Timings ---
+  long long init_ms = 0;
+  long long iter_ms_total = 0;
+  int iter_count = 0;
 };
 
 // Declare the wrapper

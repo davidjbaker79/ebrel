@@ -17,6 +17,8 @@ struct SADiagnostics {
   int                 early_stop_iter = -1;  // iteration (1-based) is stopped early, -1 otherwise
   int                 attempted_total = 0;   // total proposals attempted (non no-op)
   int                 accepted_total  = 0;   // total accepted
+  long long           iter_ms_total   = 0;   // total iterations time in ms
+  int                 iter_count      = 0;   // number of iterations
 };
 
 // Result container for simulated annealing (Rcpp-free)

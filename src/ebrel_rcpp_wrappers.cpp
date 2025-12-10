@@ -221,7 +221,11 @@ Rcpp::List run_ebrel_R(
       Rcpp::Named("early_stop_iter")  = res.early_stop_iter,
       Rcpp::Named("proposals")        = res.proposals,
       Rcpp::Named("accepted")         = res.accepted,
-      Rcpp::Named("overall_acc")      = res.overall_acc
+      Rcpp::Named("overall_acc")      = res.overall_acc,
+      // --- timings ---
+      Rcpp::Named("init_ms")          = res.init_ms,
+      Rcpp::Named("iter_ms_total")    = res.iter_ms_total,
+      Rcpp::Named("iter_count")       = res.iter_count
     );
   } catch (const std::exception& e) {
     Rcpp::stop(e.what());

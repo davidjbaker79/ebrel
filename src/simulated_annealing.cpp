@@ -4,6 +4,7 @@
 #include "dispersal_utils.h"
 #include "update_candidate.h"
 #include "objective_utils.h"
+#include "optimisation_utils.h"
 #include <vector>
 #include <iostream>
 #include <cmath>
@@ -12,6 +13,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <cstdint>
+#include <chrono>
 
 /* Simulated annealing algorithm with:
  - option for Lam et al style tuning schedule [Lam, J. and Delosme, J.M., 1988.
@@ -130,6 +132,10 @@ SAResult simulated_annealing(
   int    no_improve       = 0;
   double last_best        = best_score;
 
+  // Timings
+  long long iter_ms_total = 0;
+  int       iter_count    = 0;
+
   // ---------- LAM: helpers & counters ----------
   auto clamp01 = [](double x, double eps = 1e-12) {
     if (x < eps) return eps;
@@ -159,10 +165,12 @@ SAResult simulated_annealing(
       continue; // skip no-op proposals
     }
 
+    // Tracking acceptance
     attempted_in_win++;
     attempted_total++;
 
     // Evaluate candidate with new params
+    auto t0 = std::chrono::steady_clock::now();
     HResult scores = compute_H(candidate, C, O, SxH, D,
                                alpha_scaled, beta_scaled, gamma_scaled,
                                n_h, n_s,
@@ -175,6 +183,11 @@ SAResult simulated_annealing(
                                Etiles_per_h,
                                cell_r, cell_c,
                                species_info);
+    double dt = ms_since(t0);
+    iter_ms_total += static_cast<long long>(dt);
+    iter_count    += 1;
+
+    // Candidate evaluation
     double candidate_eval = scores.H;
 
     // Trace histories
@@ -299,6 +312,8 @@ SAResult simulated_annealing(
   out.diag.early_stop_iter       = early_stop_iter;
   out.diag.attempted_total       = attempted_total;
   out.diag.accepted_total        = accepted_total;
+  out.diag.iter_ms_total         = iter_ms_total;
+  out.diag.iter_count            = iter_count;
 
   const int proposals_from_trace = static_cast<int>(H_history.size());
   const int proposals_print = (attempted_total > 0) ? attempted_total : proposals_from_trace;

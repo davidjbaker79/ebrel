@@ -94,27 +94,36 @@ RunEBRELResult run_ebrel(const RunEBRELInput& in, const RunEBRELOptions& opt) {
     }
   }
 
-  // --- Pre-compute species-specific dispersal information ---
-  std::vector<SpeciesDispData> species_info = precompute_species_data(
-      in.SD,
-      in.SxH,
-      in.D,
-      in.n_h,
-      in.n_s,
-      in.dim_x,
-      in.dim_y,
-      in.universal_disp_thres,
-      in.max_disp_steps,
-      in.roi_cap,
-      in.row_first_land,
-      in.row_last_land,
-      in.col_first_land,
-      in.col_last_land,
-      E_h_of_cell,
-      cell_r,
-      cell_c,
-      in.cluster_gap_cells
-  );
+  std::vector<SpeciesDispData> species_info;
+  long long init_ms;  // local timings struct
+
+  {
+    auto t0 = std::chrono::steady_clock::now();
+
+    // --- Pre-compute species-specific dispersal information ---
+    species_info = precompute_species_data(
+        in.SD,
+        in.SxH,
+        in.D,
+        in.n_h,
+        in.n_s,
+        in.dim_x,
+        in.dim_y,
+        in.universal_disp_thres,
+        in.max_disp_steps,
+        in.roi_cap,
+        in.row_first_land,
+        in.row_last_land,
+        in.col_first_land,
+        in.col_last_land,
+        E_h_of_cell,
+        cell_r,
+        cell_c,
+        in.cluster_gap_cells
+    );
+
+    init_ms = ms_since(t0);
+  }
 
   // --- Initial objectives (for scaling) ---
   const double F1 = compute_F1(X0, in.C, in.n_h, in.dim_x, in.dim_y);
@@ -227,15 +236,21 @@ RunEBRELResult run_ebrel(const RunEBRELInput& in, const RunEBRELOptions& opt) {
   out.proposals = (sa.diag.attempted_total > 0)
     ? sa.diag.attempted_total
   : static_cast<int>(out.H_trace.size());
-  out.accepted  = sa.diag.accepted_total;
+  out.accepted = sa.diag.accepted_total;
   out.overall_acc = (out.proposals > 0)
     ? static_cast<double>(out.accepted) / out.proposals
   : std::numeric_limits<double>::quiet_NaN();
+
+  // Timings
+  out.init_ms       = init_ms;
+  out.iter_ms_total = sa.diag.iter_ms_total;
+  out.iter_count    = sa.diag.iter_count;
 
   if (opt.verbose) {
     std::cout << "[run_ebrel] Done. Best H = " << out.H_best
               << " (cand evals recorded: " << out.iterations_run << ")"
               << std::endl;
+
   }
   return out;
 }
