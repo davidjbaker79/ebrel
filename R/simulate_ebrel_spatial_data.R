@@ -179,7 +179,7 @@ simulate_ebrel_spatial_data <- function(
   # --- Binary SD array
   SD_rast <- vector("list", n_s)
 
-  # - Try to create species in landscape
+  # - Try to create species in landscape s =1
   for (s in 1:n_s) {
     npres <- 0
     tries <- 0L
@@ -599,6 +599,8 @@ simulate_ebrel_spatial_data <- function(
 
   # final 0/1 raster of filled area (restricted to suitable habitat)
   ifel(visited == 1, 1, 0)
+  # Thin by 50%
+  values(visited) <- rbinom(length(values(visited)), size = 1, prob = (values(visited) / 2))
   visited
 }
 

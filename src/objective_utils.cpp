@@ -223,7 +223,10 @@ HResult compute_H(const std::vector<double>& X,
 
     const double target = O[static_cast<std::size_t>(sp)] * static_cast<double>(m_i);
     const double Gi = G[static_cast<std::size_t>(sp)];
-    g[static_cast<std::size_t>(sp)] = std::max(0.0, target - Gi);
+    // Absolute targets
+    //g[static_cast<std::size_t>(sp)] = std::max(0.0, target - Gi);
+    // Proportional targets
+    g[static_cast<std::size_t>(sp)] = (target > 0.0) ? std::max(0.0, (target - Gi) / target): 0.0;
 
     // std::cout << "sp=" << sp
     //           << " m_i=" << m_i
