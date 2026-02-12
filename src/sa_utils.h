@@ -38,27 +38,27 @@ struct InitTempResult {
  * so the neighborhood used for sampling matches your SA settings.
  */
 InitTempResult estimate_initial_temperature_benameur_cpp(
-    std::vector<double> X_seed,           // starting state (copy)
+    std::vector<int8_t> X_seed,           // starting state (copy)
     const std::vector<double>& W,         // distance weights
-    const std::vector<double>& U,
+    const std::vector<uint8_t>& U,
     const std::vector<double>& C,
     const std::vector<double>& O,
-    const std::vector<double>& SD,
     const std::vector<double>& SxH,
     const std::vector<int>&    D,
-    const std::vector<int>& E_h_of_cell,
+    const std::vector<int8_t>& E,
     const std::vector<std::vector<std::size_t>>& Etiles_per_h,
     const std::vector<int>&    cell_r,
     const std::vector<int>&    cell_c,
-    const std::vector<SpeciesDispData>& species_info,
+    const RowRunsCache& rowruns_cache,
+    const SpeciesPlan& species_plan,
     int    universal_disp_thres,
     int    max_disp_steps,
     int    roi_cap,
     const  std::vector<uint8_t>& LM,
-    const  std::vector<int>& row_first_land,
-    const  std::vector<int>& row_last_land,
-    const  std::vector<int>& col_first_land,
-    const  std::vector<int>& col_last_land,
+    const  std::vector<int16_t>& row_first_land,
+    const  std::vector<int16_t>& row_last_land,
+    const  std::vector<int16_t>& col_first_land,
+    const  std::vector<int16_t>& col_last_land,
     int    n_h,
     int    n_s,
     int    dim_x,
@@ -66,7 +66,6 @@ InitTempResult estimate_initial_temperature_benameur_cpp(
     double alpha_scaled,
     double beta_scaled,
     double gamma_scaled,
-    double base_prob_X0 = 0.85,
     // neighbourhood controls (forwarded to update_candidate)
     double step_proportion  = 0.05,
     double step_probability = 0.15,

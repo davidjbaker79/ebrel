@@ -20,38 +20,29 @@ struct HResult {
 };
 
 // Declare F1 objective function
-double compute_F1(const std::vector<double>& X,
+double compute_F1(const std::vector<int8_t>& X,
                   const std::vector<double>& C,
                   int n_h,
                   int dim_x,
                   int dim_y);
 
 // Declare F2 objective function
-double compute_F2(const std::vector<double>& X,
+double compute_F2(const std::vector<int8_t>& X,
                   const std::vector<std::vector<std::size_t>>& Etiles_per_h,
                   int n_h,
                   int dim_x,
                   int dim_y);
 
-// Declare internal geometry helper functions
+// Euclidean distance helper functions
 double euclidean_distance(const std::vector<double>& a,
                           const std::vector<double>& b);
 
+// Pairwise distances helper functions
 double pairwise_distances(const std::vector<std::vector<double>>& A,
                           const std::vector<std::vector<double>>& B);
 
-// // Declare function to compute F(x)
-// double compute_F(const std::vector<double>& X,
-//                  const std::vector<double>& C,
-//                  const std::vector<double>& E,
-//                  double alpha,
-//                  double beta,
-//                  int n_h,
-//                  int dim_x,
-//                  int dim_y);
-
 // Declare function to compute H(x)
-HResult compute_H(const std::vector<double>& X,
+HResult compute_H(const std::vector<int8_t>& X,
                   const std::vector<double>& C,
                   const std::vector<double>& O,
                   const std::vector<double>& SxH,
@@ -67,15 +58,18 @@ HResult compute_H(const std::vector<double>& X,
                   int max_disp_steps,
                   int roi_cap,
                   const std::vector<uint8_t>& LM,
-                  const std::vector<int>& row_first_land,
-                  const std::vector<int>& row_last_land,
-                  const std::vector<int>& col_first_land,
-                  const std::vector<int>& col_last_land,
-                  const std::vector<int>& E_h_of_cell,
+                  const std::vector<int16_t>& row_first_land,
+                  const std::vector<int16_t>& row_last_land,
+                  const std::vector<int16_t>& col_first_land,
+                  const std::vector<int16_t>& col_last_land,
+                  const std::vector<int8_t>& E,
                   const std::vector<std::vector<std::size_t>>& Etiles_per_h,
                   const std::vector<int>& cell_r,
                   const std::vector<int>& cell_c,
-                  const std::vector<SpeciesDispData>& species_info
+                  const RowRunsCache& rowruns_cache,
+                  const SpeciesPlan& species_plan
                   );
+
+
 
 #endif // OBJECTIVE_UTILS_H

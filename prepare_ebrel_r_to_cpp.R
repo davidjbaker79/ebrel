@@ -107,7 +107,7 @@ prepare_ebrel_r_to_cpp <- function(E_rast, C_rast, SD_rast, D_vec, SxH_mat, O_ve
   if (!is.matrix(LM_mat) || nrow(LM_mat) != n_cells || ncol(LM_mat) != 1)
     stop("Internal error extracting LM_rast values: unexpected shape.")
 
-  E  <- as.vector(E_mat)
+ a E  <- as.vector(E_mat)
   C  <- as.vector(C_mat)
   SD <- as.vector(SD_mat)
   LM <- as.vector(LM_mat)

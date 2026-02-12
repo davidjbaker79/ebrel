@@ -7,16 +7,20 @@
 #include <stdexcept>
 #include <limits>
 #include <cstdint>
+#include <string>
+
+#include "offsets.h"
+#include "species_plan.h"
 
 //---------------------------- Main function -----------------------------------
 
 // User supplied options for running ebrel model
 struct RunEBRELOptions {
   double sigma            = 0.05;
-  const std::vector<double>* X0 = nullptr;   // X0 supply optional
-  double base_prob_X0     = 0.85;
-  double step_proportion  = 0.05;
-  double step_probability = 0.15;
+  const std::vector<int8_t>* X0 = nullptr;   // X0 supply optional
+  double base_prob_X0     = 0.95;
+  double step_proportion  = 0.01;
+  double step_probability = 0.05;
   int n_iterations        = 10000;
   double temp             = 2000;
   double cooling_rate_c   = 1;
@@ -31,6 +35,8 @@ struct RunEBRELOptions {
   int iter_no_improve     = 1000;  // consecutive iters with no meaningful improvement
   double improve_eps      = 1e-6;  // relative improvement needed to reset patience
   int rng_seed            = -1;
+  int  write_every        = 0;     // 0 = disabled
+  std::string trace_file  = ""; // empty = disabled
   bool verbose            = false;
 };
 
@@ -47,19 +53,26 @@ struct RunEBRELInput {
   double alpha = 1.0;
   double beta = 25.0;
   double gamma = 100.0;
-  std::vector<double> U, C, E, P, O, SD, SxH;
+  std::vector<int8_t> E;
+  std::vector<uint8_t> U;
+  std::vector<double> C, O, SD, SxH;
   std::vector<int>    D;
-  std::vector<double> X0; // optional
+  std::vector<int8_t> X0;
   std::vector<uint8_t> LM;
-  std::vector<int> row_first_land;
-  std::vector<int> row_last_land;
-  std::vector<int> col_first_land;
-  std::vector<int> col_last_land;
+  std::vector<int16_t> row_first_land;
+  std::vector<int16_t> row_last_land;
+  std::vector<int16_t> col_first_land;
+  std::vector<int16_t> col_last_land;
+  std::vector<int> cell_r, cell_c;
+  std::vector<std::vector<std::size_t>> Etiles_per_h;
+  OffsetsCache offsets_cache;
+  RowRunsCache rowruns_cache;
+  SpeciesPlan species_plan;
 };
 
 // Results structure
 struct RunEBRELResult {
-  std::vector<double> X_best;
+  std::vector<int8_t> X_best;
   double H_best = 0.0;
   std::vector<double> H_trace;
   std::vector<double> F_trace;
@@ -74,7 +87,6 @@ struct RunEBRELResult {
   int    accepted  = 0;                // total accepted proposals
   double overall_acc = std::numeric_limits<double>::quiet_NaN(); // accepted/proposals
   // --- Timings ---
-  long long init_ms = 0;
   long long iter_ms_total = 0;
   int iter_count = 0;
 };

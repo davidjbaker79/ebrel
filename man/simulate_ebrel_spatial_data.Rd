@@ -15,7 +15,6 @@ simulate_ebrel_spatial_data(
   fixed_O = NULL,
   maskLandArea = FALSE,
   prop_sea = 0.2,
-  convert_to_cpp_format = TRUE,
   seed = NULL
 )
 }
@@ -63,14 +62,14 @@ layer and not used to mask habitat or species.}
 can be occupied by sea when generating the land–sea mask. Passed to the
 internal coastline/land-mask generator.}
 
+\item{seed}{Optional integer. If provided, used to seed the random number
+generator to make results reproducible.}
+
 \item{convert_to_cpp_format}{Logical. If \code{TRUE} (default), returns data
 converted into the vector/matrix formats required by the EBREL C++ code via
 \code{prepare_ebrel_r_to_cpp()}. If \code{FALSE}, returns higher-level R
 objects (mostly \code{SpatRaster}s and matrices) suitable for inspection
 and further manipulation in R.}
-
-\item{seed}{Optional integer. If provided, used to seed the random number
-generator to make results reproducible.}
 }
 \value{
 If \code{convert_to_cpp_format = FALSE}, returns a list:

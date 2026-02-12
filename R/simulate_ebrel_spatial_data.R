@@ -124,7 +124,6 @@ simulate_ebrel_spatial_data <- function(
     fixed_O = NULL,
     maskLandArea = FALSE,
     prop_sea = 0.2,
-    convert_to_cpp_format = TRUE,
     seed = NULL) {
   # --- Set seed for reproducibility
   if (!is.null(seed)) {
@@ -147,9 +146,11 @@ simulate_ebrel_spatial_data <- function(
     dim_x = dim_x,
     dim_y = dim_y,
     n_h = n_h,
-    unavail_hab_prop = 0.2,
+    unavail_hab_prop = 0.1,
     prop_sea = prop_sea
   )
+
+  plot(hab_rast$HO)
 
   # --- Mask land or reset landMask
   landMask <- hab_rast$LM
@@ -186,7 +187,7 @@ simulate_ebrel_spatial_data <- function(
 
     # cap habitats drawn and align probs
     k_max <- min(4L, n_h)
-    hab_probs <- c(0.5, 0.25, 0.125, 0.125)[seq_len(k_max)]
+    #hab_probs <- c(0.5, 0.25, 0.125, 0.125)[seq_len(k_max)]
 
     repeat {
       tries <- tries + 1
@@ -198,7 +199,7 @@ simulate_ebrel_spatial_data <- function(
       }
 
       # draw how many habitats and which ones
-      k <- sample.int(k_max, 1, prob = hab_probs)
+      k <- sample.int(k_max, 1)
       hs <- sample.int((n_h), k, replace = FALSE)
 
       # cells with any of the chosen habitats
@@ -227,6 +228,7 @@ simulate_ebrel_spatial_data <- function(
     }
   }
   SD_rast <- do.call(c, SD_rast)
+  plot(SD_rast)
 
   # --- Targets
   if (is.null(fixed_O)) {
@@ -269,14 +271,26 @@ simulate_ebrel_spatial_data <- function(
   C_rast <- ifel(is.na(C_rast), 1e10, C_rast)
   LM_rast <- ifel(is.na(landMask), 0, landMask)
 
-  # --- Simulated data in R formats
+  plot(U_rast)
+
+  # --- E one-hot to id
+  idx1 <- app(E_rast, which.max)          # 1..n_h
+  s    <- app(E_rast, sum, na.rm = TRUE)  # 0..1
+  E_id <- idx1 - 1                        # 0..(n_h-1)
+  E_id <- ifel(s == 0, -1, E_id)     # set no-habitat cells to -1
+
+  # --- U from C
+  U_rast <- ifel(C_rast == 1e10, 1, 0)
+
+  # --- Return in R formats
   sim_r <- list(
     dim_x = dim_x,
     dim_y = dim_y,
     n_h = n_h,
     n_s = n_s,
-    E = E_rast,
+    E = E_id,
     C = C_rast,
+    U = U_rast,
     SD = SD_rast,
     SxH = SxH,
     D = D,
@@ -284,40 +298,7 @@ simulate_ebrel_spatial_data <- function(
     sigma = sigma,
     LM = LM_rast
   )
-
-  # --- Return
-  if (convert_to_cpp_format) {
-    # Convert R data formats to cpp vector formats required for ebrel c++
-    sim_cpp <-
-      prepare_ebrel_r_to_cpp(
-        E_rast = E_rast,
-        C_rast = C_rast,
-        SD_rast = SD_rast,
-        D_vec = D,
-        SxH_mat = SxH,
-        O_vec = O,
-        sigma = sigma,
-        LM_rast = LM_rast
-      )
-    return(sim_cpp)
-  } else {
-    # Return in R formats, but will require running 'prepare_ebrel_r_to_cpp()' later
-    sim_r <- list(
-      dim_x = dim_x,
-      dim_y = dim_y,
-      n_h = n_h,
-      n_s = n_s,
-      E = E_rast,
-      C = C_rast,
-      SD = SD_rast,
-      SxH = SxH,
-      D = D,
-      O = O,
-      sigma = sigma,
-      LM = LM_rast
-    )
-    return(sim_r)
-  }
+  return(sim_r)
 }
 
 #' Generate autocorrelated habitat rasters with availability mask
@@ -386,6 +367,7 @@ simulate_ebrel_spatial_data <- function(
     habitat[[x]] <- .rescale01(habitat[[x]])
   }
   habitat <- ifel(urban_binary == 1, NA, habitat)
+  plot(habitat)
 
   # -- Establish habitat opportunities (HO)
   HO <- habitat

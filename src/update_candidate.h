@@ -4,6 +4,7 @@
 #define UPDATE_CANDIDATE_H
 
 #include <vector>
+#include <cstdint>
 
 /**
  * Update candidate solution for simulated annealing
@@ -15,14 +16,15 @@
  *
  * Returns a new flattened candidate vector after applying updates.
  */
-std::vector<double> update_candidate(
+std::vector<int8_t> update_candidate(
     const std::vector<double>& W,             // [n_cells * n_h]
-    const std::vector<double>& U,             // [n_cells * n_h], 1 = unavailable
-    const std::vector<double>& candidate_in,  // [n_cells * n_h], one-hot
+    const std::vector<uint8_t>& U,             // [n_cells * n_h], 1 = unavailable
+    const std::vector<int8_t>& candidate_in,  // [n_cells * n_h], one-hot
     double step_proportion,                   // proportion of eligible cells to update
     double step_probability,                  // probability of assigning any habitat
     int n_h,
     int dim_x,
-    int dim_y);
+    int dim_y,
+    int rng_seed);
 
 #endif // UPDATE_CANDIDATE_H

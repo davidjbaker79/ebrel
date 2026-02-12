@@ -1,10 +1,5 @@
 //------------------------------ Simulated annealing ---------------------------
 
-#include "simulated_annealing.h"
-#include "dispersal_utils.h"
-#include "update_candidate.h"
-#include "objective_utils.h"
-#include "optimisation_utils.h"
 #include <vector>
 #include <iostream>
 #include <cmath>
@@ -14,6 +9,14 @@
 #include <stdexcept>
 #include <cstdint>
 #include <chrono>
+#include <fstream>
+
+#include "simulated_annealing.h"
+#include "dispersal_utils.h"
+#include "update_candidate.h"
+#include "objective_utils.h"
+#include "optimisation_utils.h"
+#include "species_plan.h"
 
 /* Simulated annealing algorithm with:
  - option for Lam et al style tuning schedule [Lam, J. and Delosme, J.M., 1988.
@@ -23,18 +26,19 @@
  */
 SAResult simulated_annealing(
     // --------- Input data and parameters
-    std::vector<double> X0,
+    const std::vector<int8_t>& X0,
     const std::vector<double>& W,
-    const std::vector<double>& U,
+    const std::vector<uint8_t>& U,
     const std::vector<double>& C,
     const std::vector<double>& O,
     const std::vector<double>& SxH,
     const std::vector<int>& D,
-    const std::vector<int>& E_h_of_cell,
+    const std::vector<int8_t>& E,
     const std::vector<std::vector<std::size_t>>& Etiles_per_h,
     const std::vector<int>&    cell_r,
     const std::vector<int>&    cell_c,
-    const std::vector<SpeciesDispData>& species_info,
+    const RowRunsCache& rowruns_cache,
+    const SpeciesPlan& species_plan,
     // ---------- Dimensions
     int n_h,
     int n_s,
@@ -46,39 +50,54 @@ SAResult simulated_annealing(
     int roi_cap,
     // ---------- For avoiding extra work on sea cells
     const std::vector<uint8_t>& LM,
-    const std::vector<int>& row_first_land,
-    const std::vector<int>& row_last_land,
-    const std::vector<int>& col_first_land,
-    const std::vector<int>& col_last_land,
+    const std::vector<int16_t>& row_first_land,
+    const std::vector<int16_t>& row_last_land,
+    const std::vector<int16_t>& col_first_land,
+    const std::vector<int16_t>& col_last_land,
     // ---------- Objective function related
-    double alpha_scaled = 1,
-    double beta_scaled = 25,
-    double gamma_scaled = 100,
+    double alpha_scaled,
+    double beta_scaled,
+    double gamma_scaled,
     // ---------- Simulated Annealing
-    double step_proportion = 0.05,
-    double step_probability = 0.05,
-    int n_iterations = 10000,
-    double temp = 2000,
-    double cooling_rate_c = 1,        // constant for tuning cooling rate
+    double step_proportion,
+    double step_probability,
+    int n_iterations,
+    double temp,
+    double cooling_rate_c,        // constant for tuning cooling rate
     // ---------- LAM: user controls (default = disabled) ----------
-    bool   lam_enabled = false,       // turn Lam-style online control on/off
-    double lam_target_mid = 0.44,     // target uphill acceptance during early/mid run
-    double lam_target_final = 0.05,   // target uphill acceptance at the end
-    double lam_hold_frac = 0.60,      // fraction of run to hold lam_target_mid before decaying
-    double lam_p = 2.0,               // damping exponent in Ben-Ameur correction (>=1)
+    bool   lam_enabled,           // turn Lam-style online control on/off
+    double lam_target_mid,        // target uphill acceptance during early/mid run
+    double lam_target_final,      // target uphill acceptance at the end
+    double lam_hold_frac,         // fraction of run to hold lam_target_mid before decaying
+    double lam_p,                 // damping exponent in Ben-Ameur correction (>=1)
     // ---------- Early stopping
-    int min_iterations = 1000,        // require at least this many iterations
-    int acceptance_window = 200,      // window length for acceptance rate
-    double acceptance_thres = 0.001,  // "low" acceptance threshold
-    int iter_no_improve = 1000,       // consecutive iters with no meaningful improvement
-    double improve_eps = 1e-6,        // relative improvement needed to reset patience
-    // --------- Verbose set to false
-    bool verbose = false
+    int min_iterations,           // require at least this many iterations
+    int acceptance_window,        // window length for acceptance rate
+    double acceptance_thres,      // "low" acceptance threshold
+    int iter_no_improve,          // consecutive iters with no meaningful improvement
+    double improve_eps,           // relative improvement needed to reset patience
+    // --------- Output controls
+    int  write_every,             // 0 = disabled
+    std::string trace_file,       // empty = disabled
+    bool verbose
 ) {
 
   // Printing control
   std::ios_base::sync_with_stdio(false);
   std::cout.tie(nullptr);
+
+  // Write out
+  std::ofstream trace_out;
+  if (write_every > 0 && !trace_file.empty()) {
+    trace_out.open(trace_file, std::ios::out | std::ios::trunc);
+    if (!trace_out) {
+      throw std::runtime_error("Failed to open trace file: " + trace_file);
+    }
+
+    // Header (CSV-style)
+    trace_out << "iter,best_H,curr_H,temp,accepted_total,attempted_total,overall_acc,avg_ms\n";
+    trace_out.flush();
+  }
 
   // RNG
   std::random_device rd;
@@ -92,24 +111,27 @@ SAResult simulated_annealing(
   std::vector<double> F2_history;
 
   // Initial evaluation of X0
-  HResult init_scores = compute_H(X0, C, O, SxH, D,
-                                  alpha_scaled, beta_scaled, gamma_scaled,
-                                  n_h, n_s,
-                                  dim_x, dim_y,
-                                  universal_disp_thres, max_disp_steps, roi_cap,
-                                  LM,
-                                  row_first_land, row_last_land,
-                                  col_first_land, col_last_land,
-                                  E_h_of_cell,
-                                  Etiles_per_h,
-                                  cell_r, cell_c,
-                                  species_info);
+  HResult init_scores = compute_H(
+    X0, C, O, SxH, D,
+    alpha_scaled, beta_scaled, gamma_scaled,
+    n_h, n_s,
+    dim_x, dim_y,
+    universal_disp_thres, max_disp_steps, roi_cap,
+    LM,
+    row_first_land, row_last_land,
+    col_first_land, col_last_land,
+    E,
+    Etiles_per_h,
+    cell_r, cell_c,
+    rowruns_cache,
+    species_plan
+  );
 
   double best_score = init_scores.H;
 
   // Current & best states
-  std::vector<double> best = X0;
-  std::vector<double> curr = X0;
+  std::vector<int8_t> best = X0;
+  std::vector<int8_t> curr = X0;
   double curr_eval = best_score;
   std::vector<double> g_best = init_scores.g;
 
@@ -156,10 +178,14 @@ SAResult simulated_annealing(
   for (int z = 0; z < n_iterations; ++z) {
 
     // Propose candidate
-    std::vector<double> candidate = update_candidate(W, U, curr,
-                                                     step_proportion,
-                                                     step_probability,
-                                                     n_h, dim_x, dim_y);
+    const uint32_t rng_seed = rng(); // pulls from SA RNG
+    std::vector<int8_t> candidate = update_candidate(
+      W, U, curr,
+      step_proportion,
+      step_probability,
+      n_h, dim_x, dim_y,
+      rng_seed
+    );
 
     if (candidate == curr) {
       continue; // skip no-op proposals
@@ -169,20 +195,23 @@ SAResult simulated_annealing(
     attempted_in_win++;
     attempted_total++;
 
-    // Evaluate candidate with new params
+    // Evaluate candidate with new candidate
     auto t0 = std::chrono::steady_clock::now();
-    HResult scores = compute_H(candidate, C, O, SxH, D,
-                               alpha_scaled, beta_scaled, gamma_scaled,
-                               n_h, n_s,
-                               dim_x, dim_y,
-                               universal_disp_thres, max_disp_steps, roi_cap,
-                               LM,
-                               row_first_land, row_last_land,
-                               col_first_land, col_last_land,
-                               E_h_of_cell,
-                               Etiles_per_h,
-                               cell_r, cell_c,
-                               species_info);
+    HResult scores = compute_H(
+      candidate, C, O, SxH, D,
+      alpha_scaled, beta_scaled, gamma_scaled,
+      n_h, n_s,
+      dim_x, dim_y,
+      universal_disp_thres, max_disp_steps, roi_cap,
+      LM,
+      row_first_land, row_last_land,
+      col_first_land, col_last_land,
+      E,
+      Etiles_per_h,
+      cell_r, cell_c,
+      rowruns_cache,
+      species_plan
+    );
     double dt = ms_since(t0);
     iter_ms_total += static_cast<long long>(dt);
     iter_count    += 1;
@@ -215,7 +244,7 @@ SAResult simulated_annealing(
 
     const double t = (lam_enabled)
       ? temp_curr
-    : (temp / (1.0 + cooling_rate_c * z));  // harmonic default
+      : (temp / (1.0 + cooling_rate_c * z));  // harmonic default
 
     bool accepted = false;
     if (downhill || flat) {
@@ -286,6 +315,38 @@ SAResult simulated_annealing(
       accepted_in_win  = 0;
       uphill_attempted_in_win = 0;
       uphill_accepted_in_win  = 0;
+    }
+
+    // -------- Write intermediate results to file --------
+    if (write_every > 0 && trace_out.is_open() &&
+        ((z + 1) % write_every == 0)) {
+
+      double overall_acc =
+        (attempted_total > 0)
+      ? static_cast<double>(accepted_total) / attempted_total
+      : std::numeric_limits<double>::quiet_NaN();
+
+      double T_curr = lam_enabled
+      ? temp_curr
+      : (temp / (1.0 + cooling_rate_c * z));
+
+      double avg_ms =
+        (iter_count > 0)
+        ? static_cast<double>(iter_ms_total) / iter_count
+      : 0.0;
+
+      trace_out << (z + 1) << ","
+                << best_score << ","
+                << curr_eval << ","
+                << T_curr << ","
+                << accepted_total << ","
+                << attempted_total << ","
+                << overall_acc << ","
+                << avg_ms
+                << '\n';
+
+      // Optional but recommended for long runs
+      trace_out.flush();
     }
 
     if (verbose && ((z + 1) % win == 0)) {

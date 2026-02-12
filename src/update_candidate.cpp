@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <vector>
+#include <cmath>
 
 //-------------------------- Local helpers -------------------------------------
 
@@ -20,29 +21,42 @@ namespace {
 
 //-------------------------- Main functions ------------------------------------
 
-
 // Update candidate solution based on W (distance decay weighting)
-std::vector<double> update_candidate(
+std::vector<int8_t> update_candidate(
     const std::vector<double>& W,            // [n_h * n_cells], habitat-major
-    const std::vector<double>& U,            // [n_h * n_cells], 1=unavailable
-    const std::vector<double>& candidate_in, // [n_h * n_cells], one-hot
+    const std::vector<uint8_t>& U,           // [n_h * n_cells], 1=unavailable
+    const std::vector<int8_t>& candidate_in, // [n_cells], -1 or habitat index
     double step_proportion,                  // fraction of eligible cells to consider
     double step_probability,                 // mass for "pick a habitat"
     int n_h,
     int dim_x,
-    int dim_y
+    int dim_y,
+    int rng_seed = -1
 ) {
   const int n_cells = dim_x * dim_y;
 
+  if ((int)candidate_in.size() != n_cells) {
+    throw std::runtime_error("candidate_in must have length dim_x*dim_y");
+  }
+  if ((int)W.size() != n_h * n_cells || (int)U.size() != n_h * n_cells) {
+    throw std::runtime_error("W and U must have length n_h*dim_x*dim_y");
+  }
+  if (step_proportion <= 0.0 || step_probability < 0.0) return candidate_in;
+  if (step_probability > 1.0) throw std::runtime_error("step_probability must be <= 1");
+
+
   // Make a mutable copy to edit and return
-  std::vector<double> candidate = candidate_in;
+  std::vector<int8_t> candidate = candidate_in;
 
   // Collect eligible cells (any habitat available)
   std::vector<int> eligible;
   eligible.reserve(n_cells);
   for (int i = 0; i < n_cells; ++i) {
     for (int h = 0; h < n_h; ++h) {
-      if (U[idx(i, h, n_cells)] == 0.0) { eligible.push_back(i); break; }
+      if (U[idx(i, h, n_cells)] == 0) {
+        eligible.push_back(i);
+        break;
+      }
     }
   }
   if (eligible.empty()) return candidate;
@@ -55,7 +69,9 @@ std::vector<double> update_candidate(
   std::vector<double> cell_probs(n_cells, 0.0);
   for (int i = 0; i < n_cells; ++i) {
     double s = 0.0;
-    for (int h = 0; h < n_h; ++h) s += W[idx(i, h, n_cells)];
+    for (int h = 0; h < n_h; ++h) {
+      s += W[idx(i, h, n_cells)];
+    }
     cell_probs[i] = s;
   }
 
@@ -69,10 +85,12 @@ std::vector<double> update_candidate(
   for (double& p : eligible_probs) p /= total;
 
   // Random seeds
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::discrete_distribution<> cell_dist(eligible_probs.begin(), eligible_probs.end());
+  std::mt19937 gen;
+  if (rng_seed >= 0) gen.seed(static_cast<uint32_t>(rng_seed));
+  else gen.seed(std::random_device{}());
 
+  // Weights and probs
+  std::discrete_distribution<> cell_dist(eligible_probs.begin(), eligible_probs.end());
   std::vector<double> habitat_weights(n_h);
   std::vector<double> outcome_probs(n_h + 1); // [0]=no habitat, [1..n_h]=habitats
 
@@ -83,7 +101,7 @@ std::vector<double> update_candidate(
     // Masked habitat weights for this cell
     double sum_w = 0.0;
     for (int h = 0; h < n_h; ++h) {
-      double w = (U[idx(i, h, n_cells)] == 0.0) ? W[idx(i, h, n_cells)] : 0.0;
+      const double w = (U[idx(i, h, n_cells)] == 0) ? W[idx(i, h, n_cells)] : 0.0;
       habitat_weights[h] = w;
       sum_w += w;
     }
@@ -92,7 +110,9 @@ std::vector<double> update_candidate(
     outcome_probs[0] = 1.0 - step_probability;
     if (sum_w > 0.0) {
       const double scale = step_probability / sum_w;
-      for (int h = 0; h < n_h; ++h) outcome_probs[h + 1] = habitat_weights[h] * scale;
+      for (int h = 0; h < n_h; ++h) {
+        outcome_probs[h + 1] = habitat_weights[h] * scale;
+      }
     } else {
       std::fill(outcome_probs.begin() + 1, outcome_probs.end(), 0.0);
       outcome_probs[0] = 1.0;
@@ -101,10 +121,8 @@ std::vector<double> update_candidate(
     std::discrete_distribution<> outcome_dist(outcome_probs.begin(), outcome_probs.end());
     const int outcome = outcome_dist(gen); // 0 = no habitat, 1..n_h = chosen habitat
 
-    // Clear existing assignment, then apply outcome
-    for (int h = 0; h < n_h; ++h) candidate[idx(i, h, n_cells)] = 0.0;
-    if (outcome > 0) candidate[idx(i, outcome - 1, n_cells)] = 1.0;
+    if (outcome == 0) candidate[i] = static_cast<int8_t>(-1);
+    else candidate[i] = static_cast<int8_t>(outcome - 1); // 0..n_h-1
   }
-
   return candidate;
 }

@@ -4,6 +4,7 @@
 #define GENERATE_X_ZERO_H
 
 #include <vector>
+#include <cstdint>
 
 /* Generate X0 (initial configuration) with an "empty" option:
  *  - With probability base_prob, leave the tile empty (all 0s across habitats).
@@ -14,11 +15,11 @@
  */
 
 // Random X0 generation (naive) - this is entirely random
-std::vector<double> generate_X0_A(const std::vector<double>& U,
-                                  int n_h,
-                                  int dim_x,
-                                  int dim_y,
-                                  double base_prob,
-                                  int rng_seed = -1);
+std::vector<int8_t> generate_X0_A(const std::vector<uint8_t>& U,
+                                   int n_h,
+                                   int dim_x,
+                                   int dim_y,
+                                   double base_prob,
+                                   int rng_seed = -1);
 
 #endif  // GENERATE_X_ZERO_H

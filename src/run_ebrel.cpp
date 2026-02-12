@@ -3,9 +3,11 @@
 #include "run_ebrel.h"
 #include "simulated_annealing.h"
 #include "objective_utils.h"
+#include "species_plan.h"
 #include "dispersal_utils.h"
 #include "generate_x_zero.h"
 #include "optimisation_utils.h"
+
 
 #include <numeric>
 #include <iostream>
@@ -37,14 +39,14 @@ namespace {
 
     ensure(in.U.size()   == Hsz,   "U size mismatch (expected dim_x*dim_y*n_h)");
     ensure(in.C.size()   == Hsz,   "C size mismatch (expected dim_x*dim_y*n_h)");
-    ensure(in.E.size()   == Hsz,   "E size mismatch (expected dim_x*dim_y*n_h)");
+    ensure(in.E.size()   == cells,   "E size mismatch (expected dim_x*dim_y)");
     ensure(in.O.size()   == static_cast<size_t>(in.n_s), "O size mismatch (expected n_s)");
     ensure(in.SD.size()  == Ssz,   "SD size mismatch (expected dim_x*dim_y*n_s)");
     ensure(in.SxH.size() == SxHsz, "SxH size mismatch (expected n_h*n_s)");
     ensure(in.D.size()   == static_cast<size_t>(in.n_s), "D size mismatch (expected n_s)");
 
     if (!in.X0.empty()) {
-      ensure(in.X0.size() == Hsz, "X0 size mismatch (expected dim_x*dim_y*n_h)");
+      ensure(in.X0.size() == cells, "X0 size mismatch (expected dim_x*dim_y)");
     }
 
   }
@@ -56,11 +58,8 @@ namespace {
 RunEBRELResult run_ebrel(const RunEBRELInput& in, const RunEBRELOptions& opt) {
   validate_shapes(in);
 
-  // ---- Number of grid cells ----
-  const int cells = static_cast<int>(n_cells(in.dim_x, in.dim_y));
-
   // ---- X0: provided or generated ----
-  std::vector<double> X0;
+  std::vector<int8_t> X0;
   if (!in.X0.empty()) {
     X0 = in.X0; // user-supplied
   } else {
@@ -68,97 +67,43 @@ RunEBRELResult run_ebrel(const RunEBRELInput& in, const RunEBRELOptions& opt) {
                          opt.base_prob_X0, opt.rng_seed);
   };
 
-  // ---- Precompute row/col coords [TESTED in codePad & WORKS] ----
-  std::vector<int> cell_r(cells), cell_c(cells);
-  for (int k = 0; k < cells; ++k) {
-    cell_r[k] = static_cast<int>(k / static_cast<std::size_t>(in.dim_x));
-    cell_c[k] = static_cast<int>(k % static_cast<std::size_t>(in.dim_x));
-  }
-
-  // ---- One-hot habitat index per cell for E (-1 = none) [TESTED in codePad & WORKS] ----
-  std::vector<int> E_h_of_cell(cells, -1);
-  for (int h = 0; h < in.n_h; ++h) {
-    const std::size_t base = static_cast<std::size_t>(h) * cells;
-    for (int k = 0; k < cells; ++k) {
-      std::size_t kk = static_cast<std::size_t>(k);
-      if (in.E[base + kk] == 1.0) E_h_of_cell[k] = h;
-    }
-  }
-
-  // ---- Pre-compute Etiles for compute_F2 ----
-  std::vector<std::vector<std::size_t>> Etiles_per_h(in.n_h);
-  for (int tile = 0; tile < cells; ++tile) {
-    int h = E_h_of_cell[tile];
-    if (h >= 0) {
-      Etiles_per_h[static_cast<std::size_t>(h)].push_back(tile);
-    }
-  }
-
-  std::vector<SpeciesDispData> species_info;
-  long long init_ms;  // local timings struct
-
-  {
-    auto t0 = std::chrono::steady_clock::now();
-
-    // --- Pre-compute species-specific dispersal information ---
-    species_info = precompute_species_data(
-        in.SD,
-        in.SxH,
-        in.D,
-        in.n_h,
-        in.n_s,
-        in.dim_x,
-        in.dim_y,
-        in.universal_disp_thres,
-        in.max_disp_steps,
-        in.roi_cap,
-        in.row_first_land,
-        in.row_last_land,
-        in.col_first_land,
-        in.col_last_land,
-        E_h_of_cell,
-        cell_r,
-        cell_c,
-        in.cluster_gap_cells
-    );
-
-    init_ms = ms_since(t0);
-  }
-
-  // --- Initial objectives (for scaling) ---
+  // ---- Initial objectives (for scaling) ----
   const double F1 = compute_F1(X0, in.C, in.n_h, in.dim_x, in.dim_y);
-  const double F2 = compute_F2(X0, Etiles_per_h, in.n_h, in.dim_x, in.dim_y);
+  const double F2 = compute_F2(X0, in.Etiles_per_h, in.n_h, in.dim_x, in.dim_y);
 
-  // Use the same G variant as SA so scaling matches the run
+  // ---- Pre-compute species plan ----
+  SpeciesPlan species_plan = build_species_plan(
+      in.SD,
+      in.SxH,
+      in.D,
+      in.O,
+      in.n_h, in.n_s,
+      in.dim_x, in.dim_y,
+      in.universal_disp_thres, in.max_disp_steps, in.roi_cap,
+      in.row_first_land, in.row_last_land, in.col_first_land, in.col_last_land,
+      in.E,
+      in.cell_r, in.cell_c);
+
+  // ---- Use the same G variant as SA so scaling matches the run ----
   std::vector<double> G_init = compute_G(
     X0,
-    in.n_h,
-    in.n_s,
-    in.dim_x,
-    in.dim_y,
-    in.universal_disp_thres,
-    in.max_disp_steps,
-    in.roi_cap,
-    in.LM,
-    in.row_first_land,
-    in.row_last_land,
-    in.col_first_land,
-    in.col_last_land,
-    cell_r,
-    cell_c,
-    E_h_of_cell,
-    species_info
+    in.LM, in.row_first_land, in.row_last_land, in.col_first_land, in.col_last_land,
+    in.cell_r, in.cell_c,
+    in.E,
+    in.dim_x, in.dim_y,
+    in.universal_disp_thres, in.max_disp_steps, in.roi_cap,
+    in.rowruns_cache,
+    species_plan
   );
-
   const double G_sum = std::accumulate(G_init.begin(), G_init.end(), 0.0);
 
-  // Safe rescaling
+  // ---- Safe rescaling of alpha, beta, and gamma ----
   const double eps = 1e-12;
   const double alpha_scaled = in.alpha;
   const double beta_scaled  = (std::abs(F2) > eps) ? (in.beta  * F1 / F2)  : in.beta;
   const double gamma_scaled = (std::abs(G_sum) > eps) ? (in.gamma * F1 / G_sum) : in.gamma;
 
-  // Distance weights
+  // ---- Compute distance weights ----
   std::vector<double> W = compute_distance_weights(in.E, in.U, in.n_h, in.dim_x, in.dim_y, opt.sigma);
   {
     const size_t Hsz = n_cells(in.dim_x, in.dim_y) * static_cast<size_t>(in.n_h);
@@ -173,18 +118,19 @@ RunEBRELResult run_ebrel(const RunEBRELInput& in, const RunEBRELOptions& opt) {
   }
 
   SAResult sa = simulated_annealing(
-    std::move(X0),
+    X0,
     W,
     in.U,
     in.C,
     in.O,
     in.SxH,
     in.D,
-    E_h_of_cell,
-    Etiles_per_h,
-    cell_r,
-    cell_c,
-    species_info,
+    in.E,
+    in.Etiles_per_h,
+    in.cell_r,
+    in.cell_c,
+    in.rowruns_cache,
+    species_plan,
     in.n_h,
     in.n_s,
     in.dim_x,
@@ -215,6 +161,8 @@ RunEBRELResult run_ebrel(const RunEBRELInput& in, const RunEBRELOptions& opt) {
     opt.acceptance_thres,
     opt.iter_no_improve,
     opt.improve_eps,
+    opt.write_every,
+    opt.trace_file,
     opt.verbose
   );
 
@@ -242,7 +190,6 @@ RunEBRELResult run_ebrel(const RunEBRELInput& in, const RunEBRELOptions& opt) {
   : std::numeric_limits<double>::quiet_NaN();
 
   // Timings
-  out.init_ms       = init_ms;
   out.iter_ms_total = sa.diag.iter_ms_total;
   out.iter_count    = sa.diag.iter_count;
 

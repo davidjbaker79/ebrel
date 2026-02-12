@@ -21,8 +21,8 @@ namespace {
 //------------------- Main functions -------------------------------------------
 
 std::vector<double> compute_distance_weights(
-    const std::vector<double>& E,
-    const std::vector<double>& U,
+    const std::vector<int8_t>& E,
+    const std::vector<uint8_t>& U,
     int n_h,
     int dim_x,
     int dim_y,
@@ -35,24 +35,20 @@ std::vector<double> compute_distance_weights(
   const int dr[8] = {-1,-1,-1, 0, 0, 1, 1, 1};
   const int dc[8] = {-1, 0, 1,-1, 1,-1, 0, 1};
 
-  // // For looking up idx
-  // auto idx = [n_h](int cell, int h) -> int {
-  //   return cell * n_h + h;
-  // };
-
   auto idx = [n_cells](int cell, int h) {
     return h * n_cells + cell;
     };
 
+  const int INF = std::numeric_limits<int>::max();
 
   for (int h = 0; h < n_h; ++h) {
     // Int hops for Chebyshev
-    std::vector<int> dist(n_cells, std::numeric_limits<int>::max());
+    std::vector<int> dist(n_cells, INF);
     std::queue<Cell> q;
 
     // Seed with presence cells
     for (int cell = 0; cell < n_cells; ++cell) {
-      if (E[idx(cell, h)] == 1.0) {
+      if (E[cell] == h) {
         int r = cell / dim_x, c = cell % dim_x;
         dist[cell] = 0;
         q.push(Cell{r, c});
@@ -81,8 +77,10 @@ std::vector<double> compute_distance_weights(
     // Convert to weights, mask U and E
     double total_weight = 0.0;
     for (int cell = 0; cell < n_cells; ++cell) {
-      bool unavailable = (U[idx(cell, h)] == 1.0) || (E[idx(cell, h)] == 1.0);
-      if (unavailable || !std::isfinite(dist[cell])) {
+
+      bool unavailable = (U[idx(cell, h)] != 0) || (E[cell] == h);
+
+      if (unavailable || dist[cell] == INF)  {
         W[idx(cell, h)] = 0.0;
       } else {
         double w = std::exp(-sigma * dist[cell]);

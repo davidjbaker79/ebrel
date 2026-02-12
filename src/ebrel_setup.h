@@ -16,16 +16,12 @@
 #include <stdexcept>
 #include <string>
 #include <cstddef>
+#include <cmath>
 
-// Check that each cell has at most one habitat present
-// - at present this is binary 0/1 but may relax later to accommodate partial habitat cover
-void validate_existing_habitat(const std::vector<double>& E,
-                               int dim_x,
-                               int dim_y,
-                               int n_h);
+#include "offsets.h"
 
 // Validate input dimensions for creating the Ebrel class object
-inline void validate_dimensions(const std::vector<double>& E,
+inline void validate_dimensions(const std::vector<int8_t>& E,
                                 const std::vector<double>& C,
                                 const std::vector<double>& SD,
                                 const std::vector<int>& D,
@@ -45,12 +41,12 @@ inline void validate_dimensions(const std::vector<double>& E,
   const std::size_t Ssz   = cells * static_cast<std::size_t>(n_s);
   const std::size_t SxHsz = static_cast<std::size_t>(n_h) * static_cast<std::size_t>(n_s);
 
-  if (E.size()  != Hsz)
+  if (E.size()  != cells)
     throw std::runtime_error("E size mismatch: got " + std::to_string(E.size())  +
-                             ", expected " + std::to_string(Hsz));
+                             ", expected " + std::to_string(cells));
   if (C.size()  != Hsz)
     throw std::runtime_error("C size mismatch: got " + std::to_string(C.size())  +
-                             ", expected " + std::to_string(Hsz));
+                             ", expected " + std::to_string(Hsz) + " (one per cell).");
   if (SD.size() != Ssz)
     throw std::runtime_error("SD size mismatch: got " + std::to_string(SD.size()) +
                              ", expected " + std::to_string(Ssz));
@@ -69,7 +65,7 @@ inline void validate_dimensions(const std::vector<double>& E,
 }
 
 // Create unavailable mask from C
-[[nodiscard]] std::vector<double> get_unavailable_mask(const std::vector<double>& C,
+[[nodiscard]] std::vector<uint8_t> get_unavailable_mask(const std::vector<double>& C,
                                                        int n_h,
                                                        int dim_x,
                                                        int dim_y,
@@ -79,10 +75,10 @@ inline void validate_dimensions(const std::vector<double>& E,
 inline void compute_land_spans(const std::vector<uint8_t>& LM,
                                int dim_x,
                                int dim_y,
-                               std::vector<int>& row_first_land,
-                               std::vector<int>& row_last_land,
-                               std::vector<int>& col_first_land,
-                               std::vector<int>& col_last_land)
+                               std::vector<int16_t>& row_first_land,
+                               std::vector<int16_t>& row_last_land,
+                               std::vector<int16_t>& col_first_land,
+                               std::vector<int16_t>& col_last_land)
 {
   // One entry per row / column
   row_first_land.assign(dim_y, dim_x);  // "no land" => first = dim_x
@@ -108,38 +104,111 @@ inline void compute_land_spans(const std::vector<uint8_t>& LM,
 }
 
 // Build Ebrel class object outputs
-inline void create_ebrel_class_object(const std::vector<double>& E,
+inline void create_ebrel_class_object(const std::vector<int8_t>& E,
                                       const std::vector<double>& C,
                                       const std::vector<double>& SD,
                                       const std::vector<int>&    D,
                                       const std::vector<double>& SxH,
                                       const std::vector<double>& O,
                                       const std::vector<uint8_t>& LM,
+                                      int universal_disp_thres,
                                       int dim_x,
                                       int dim_y,
                                       int n_h,
                                       int n_s,
                                       double sentinel,
-                                      double sigma,
-                                      std::vector<double>& U_out,
-                                      std::vector<int>& row_first_land,
-                                      std::vector<int>& row_last_land,
-                                      std::vector<int>& col_first_land,
-                                      std::vector<int>& col_last_land)
+                                      double sigma_in,
+                                      double& sigma_out,
+                                      std::vector<uint8_t>& U_out,
+                                      std::vector<int16_t>& row_first_land,
+                                      std::vector<int16_t>& row_last_land,
+                                      std::vector<int16_t>& col_first_land,
+                                      std::vector<int16_t>& col_last_land,
+                                      std::vector<int>& cell_r_out,
+                                      std::vector<int>& cell_c_out,
+                                      std::vector<std::vector<std::size_t>>& Etiles_per_h_out,
+                                      RowRunsCache& rowruns_cache_out)
 {
-  // Check sizes, including LM
-  validate_dimensions(E, C, SD, D, SxH, O, LM,
-                      dim_x, dim_y, n_h, n_s);
+  // ---- Check sizes, including LM ----
+  validate_dimensions(E, C, SD, D, SxH, O, LM, dim_x, dim_y, n_h, n_s);
 
-  validate_existing_habitat(E, dim_x, dim_y, n_h);
-
-  // Derive land spans from the LM mask
+  // ---- Derive land spans from the LM mask ----
   compute_land_spans(LM, dim_x, dim_y,
                      row_first_land, row_last_land,
                      col_first_land, col_last_land);
 
-  // Existing unavailable-mask logic
+  // ---- Existing unavailable-mask logic ----
   U_out = get_unavailable_mask(C, n_h, dim_x, dim_y, sentinel);
+
+  // ---- Apply land mask to U ----
+  const std::size_t cells = static_cast<std::size_t>(dim_x) * static_cast<std::size_t>(dim_y);
+  for (int h = 0; h < n_h; ++h) {
+    const std::size_t off = static_cast<std::size_t>(h) * cells;
+    for (std::size_t cell = 0; cell < cells; ++cell) {
+      if (LM[cell] == 0) U_out[off + cell] = 1;
+    }
+  }
+
+  // ---- Check that no cells outside LM have E ----
+  for (std::size_t cell = 0; cell < cells; ++cell) {
+    if (LM[cell] == 0 && E[cell] != -1) {
+      throw std::runtime_error("E must be -1 where LM==0 (cell=" + std::to_string(cell) + ")");
+    }
+  }
+
+  // ---- Calculate sigma = 1 / mean(D>0) ----
+  double sigma;
+
+  if (sigma_in > 0.0 && std::isfinite(sigma_in)) {
+    sigma = sigma_in;
+  } else {
+    if (D.empty()) {
+      throw std::runtime_error("D must not be empty when computing default sigma");
+    }
+    double sumD = 0.0;
+    int cnt = 0;
+    for (int d : D) {
+      if (d > 0) { sumD += static_cast<double>(d); ++cnt; }
+    }
+    if (cnt == 0) {
+      throw std::runtime_error("All values in D are <= 0; cannot compute default sigma");
+    }
+
+    const double meanD = sumD / static_cast<double>(cnt);
+    sigma = 1.0 / meanD;
+
+    if (!(sigma > 0.0) || !std::isfinite(sigma)) {
+      throw std::runtime_error("Computed default sigma is not positive/finite");
+    }
+  }
+  sigma_out = sigma;
+
+  // ---- Precompute row/col coords [TESTED in codePad & WORKS] ----
+  cell_r_out.resize(cells);
+  cell_c_out.resize(cells);
+  for (std::size_t k = 0; k < cells; ++k) {
+    cell_r_out[k] = static_cast<int>(k / static_cast<std::size_t>(dim_x));
+    cell_c_out[k] = static_cast<int>(k % static_cast<std::size_t>(dim_x));
+  }
+
+  // ---- Pre-compute Etiles for compute_F2 ----
+  Etiles_per_h_out.assign(static_cast<std::size_t>(n_h), {});
+  for (std::size_t tile = 0; tile < cells; ++tile) {
+    const int h = E[tile];
+    if (h >= 0) {
+      if (h >= n_h) {
+        throw std::runtime_error("E contains habitat index >= n_h");
+      }
+      Etiles_per_h_out[static_cast<std::size_t>(h)].push_back(tile);
+    }
+  }
+
+  // ---- Build offsets cache ----
+  OffsetsCache offsets_cache = build_offsets_cache_round(universal_disp_thres);
+
+  // ---- Build row runs cache from offsets cache ----
+  rowruns_cache_out = build_rowruns_cache_from_offsets(offsets_cache);
+
 }
 
 #endif  // EBREL_SETUP_H

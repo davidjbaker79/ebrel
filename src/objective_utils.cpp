@@ -1,3 +1,4 @@
+
 //-------------------------- Ebrel objective functions -------------------------
 
 #include "objective_utils.h"
@@ -20,6 +21,22 @@ namespace {
     return static_cast<std::size_t>(dim_x) * static_cast<std::size_t>(dim_y);
   }
 
+  inline std::size_t suitable_idx(const SpeciesPlan& P, int sp, int h) {
+    return static_cast<std::size_t>(sp) * static_cast<std::size_t>(P.n_h) + static_cast<std::size_t>(h);
+  }
+
+  inline bool is_suitable(const SpeciesPlan& P, int sp, int h) {
+    return P.suitable[suitable_idx(P, sp, h)] != 0u;
+  }
+
+  // SeedT is presumably uint32_t or similar; adapt if needed.
+  inline const SeedT* seed_begin(const SpeciesPlan& P, int sp) {
+    return P.seed_pool.data() + P.seed_start[sp];
+  }
+  inline const SeedT* seed_end(const SpeciesPlan& P, int sp) {
+    return P.seed_pool.data() + P.seed_start[sp] + P.seed_len[sp];
+  }
+
   // For Euclidean distance
   inline int row_of(std::size_t tile, int dim_x) {
     return static_cast<int>(tile / static_cast<std::size_t>(dim_x));
@@ -29,6 +46,32 @@ namespace {
   inline int col_of(std::size_t tile, int dim_x) {
     return static_cast<int>(tile % static_cast<std::size_t>(dim_x));
   }
+
+  // Compute discounted seeds
+  inline int compute_m_i_from_plan(
+      int sp,
+      const SpeciesPlan& species_plan,
+      const std::vector<int8_t>& X
+  ) {
+    int m_i = 0;
+
+    const SeedT* b = seed_begin(species_plan, sp);
+    const SeedT* e = seed_end(species_plan, sp);
+
+    for (const SeedT* it = b; it != e; ++it) {
+      const std::size_t k = static_cast<std::size_t>(*it);
+
+      const int hx = X[k];
+      if (hx < 0) {
+        ++m_i; // not converted -> seed remains
+      } else {
+        if (is_suitable(species_plan, sp, hx)) ++m_i; // converted but still suitable -> keep
+        // else discounted
+      }
+    }
+    return m_i;
+  }
+
 
   // Sum of Euclidean distances for unordered pairs within one set (i<j).
   // - can multiply by 2 to obtain the ordered-pair sum to match JAE
@@ -71,73 +114,63 @@ namespace {
 // -------------------- Objective functions ------------------------------------
 
 // F1: sum_{h,cell} X * C  (habitat-major layout: idx = h*cells + tile)
-double compute_F1(const std::vector<double>& X,
+double compute_F1(const std::vector<int8_t>& X,
                   const std::vector<double>& C,
                   int n_h, int dim_x, int dim_y) {
 
   const int cells = n_cells(dim_x, dim_y);
   double f1 = 0.0;
 
-  for (int h = 0; h < n_h; ++h) {
-    const std::size_t base = static_cast<std::size_t>(h) * static_cast<std::size_t>(cells);
-    for (int tile = 0; tile < cells; ++tile) {
-      std::size_t idx = base + static_cast<std::size_t>(tile);
-      const double x = X[idx];
-      if (x != 0.0) f1 += x * C[idx];  // skip zero in X as these will dominate
+  for (int cell = 0; cell < cells; ++cell) {
+    const int h = X[cell];
+    if (h >= 0) {
+      const std::size_t idx =
+        static_cast<std::size_t>(h) * static_cast<std::size_t>(cells)
+      + static_cast<std::size_t>(cell);
+      f1 += C[idx];
     }
   }
+
   return f1;
 }
 
 // F2: total = w_xx * (X–X sum once) + w_ex * (E–X sum once)
 //  - original formulation used ordered pairwise sum, but this weights xx more than xe
-double compute_F2(const std::vector<double>& X,
+double compute_F2(const std::vector<int8_t>& X,
                   const std::vector<std::vector<std::size_t>>& Etiles_per_h,
                   int n_h, int dim_x, int dim_y) {
 
   const int cells = n_cells(dim_x, dim_y);
+
+  // Build X tiles per habitat in one pass over cells
+  std::vector<std::vector<std::size_t>> Xtiles_per_h(static_cast<std::size_t>(n_h));
+  // Optional: rough reserve heuristic (tune or drop)
+  for (int h = 0; h < n_h; ++h) Xtiles_per_h[static_cast<std::size_t>(h)].reserve(cells / 16);
+
+  for (int tile = 0; tile < cells; ++tile) {
+    const int h = X[static_cast<std::size_t>(tile)];
+    if (h >= 0) {
+      Xtiles_per_h[static_cast<std::size_t>(h)].push_back(static_cast<std::size_t>(tile));
+    }
+  }
+
   double total = 0.0;
 
-  // For each habitat
   for (int h = 0; h < n_h; ++h) {
-    const std::size_t base = static_cast<std::size_t>(h)* static_cast<std::size_t>(cells);
+    const auto& Etiles = Etiles_per_h[static_cast<std::size_t>(h)];
+    const auto& Xtiles = Xtiles_per_h[static_cast<std::size_t>(h)];
 
-    // Precomputed E tiles for this habitat
-    const std::vector<std::size_t>& Etiles = Etiles_per_h[static_cast<std::size_t>(h)];
-
-    // Collect X tiles for this habitat under the current configuration
-    std::vector<std::size_t> Xtiles;
-    Xtiles.reserve(cells / 8); // or reserve(Etiles.size()) if you like
-    for (int tile = 0; tile < cells; ++tile) {
-      std::size_t idx = base + static_cast<std::size_t>(tile);
-      if (X[idx] == 1.0) {
-        Xtiles.push_back(tile);
-      }
+    if (!Xtiles.empty()) {
+      total += sum_pairwise_self_unordered(Xtiles, dim_x);     // X–X
+      if (!Etiles.empty()) total += sum_pairwise_cross(Etiles, Xtiles, dim_x); // E–X
     }
-
-    const double xx_once = sum_pairwise_self_unordered(Xtiles, dim_x);  // X–X
-    const double ex_once = sum_pairwise_cross(Etiles, Xtiles, dim_x); // E–X
-
-    total += xx_once + ex_once;
   }
 
   return total;
 }
 
-
-// // F(X) = alpha * F1 + beta * F2
-// double compute_F(const std::vector<double>& X,
-//                  const std::vector<double>& C,
-//                  const std::vector<double>& E,
-//                  double alpha, double beta,
-//                  int n_h, int dim_x, int dim_y) {
-//   const double f1 = compute_F1(X, C, n_h, dim_x, dim_y);
-//   const double f2 = compute_F2(X, E, n_h, dim_x, dim_y);
-//   return alpha * f1 + beta * f2;
-// }
-
 // ---- Compute H
-HResult compute_H(const std::vector<double>& X,
+HResult compute_H(const std::vector<int8_t>& X,
                   const std::vector<double>& C,
                   const std::vector<double>& O,
                   const std::vector<double>& SxH,
@@ -153,87 +186,60 @@ HResult compute_H(const std::vector<double>& X,
                   int max_disp_steps,
                   int roi_cap,
                   const std::vector<uint8_t>& LM,
-                  const std::vector<int>& row_first_land,
-                  const std::vector<int>& row_last_land,
-                  const std::vector<int>& col_first_land,
-                  const std::vector<int>& col_last_land,
-                  const std::vector<int>& E_h_of_cell,
+                  const std::vector<int16_t>& row_first_land,
+                  const std::vector<int16_t>& row_last_land,
+                  const std::vector<int16_t>& col_first_land,
+                  const std::vector<int16_t>& col_last_land,
+                  const std::vector<int8_t>& E,
                   const std::vector<std::vector<std::size_t>>& Etiles_per_h,
                   const std::vector<int>& cell_r,
                   const std::vector<int>& cell_c,
-                  const std::vector<SpeciesDispData>& species_info)
+                  const RowRunsCache& rowruns_cache,
+                  const SpeciesPlan& species_plan)
 {
-
-  const int cells = n_cells(dim_x, dim_y);
 
   // ---- F1 and F2 -----
   const double f1 = compute_F1(X, C, n_h, dim_x, dim_y);
   const double f2 = compute_F2(X, Etiles_per_h, n_h, dim_x, dim_y);
 
   // ---- Compute G ----
-  std::vector<double> G;
-  G = compute_G(X, n_h, n_s,
-                dim_x, dim_y,
-                universal_disp_thres, max_disp_steps, roi_cap,
-                LM,
-                row_first_land, row_last_land,
-                col_first_land, col_last_land,
-                cell_r, cell_c,
-                E_h_of_cell,
-                species_info);
+  std::vector<double> G = compute_G(
+    X,
+    LM,
+    row_first_land, row_last_land,
+    col_first_land, col_last_land,
+    cell_r, cell_c,
+    E,
+    dim_x, dim_y,
+    universal_disp_thres, max_disp_steps, roi_cap,
+    rowruns_cache,
+    species_plan);
 
   // ---- Shortfall per species relative to target o_i * m_i ----
-  std::vector<double> g(n_s, 0.0);
+  std::vector<double> g(static_cast<std::size_t>(n_s), 0.0);
 
-  // ---- Create a habitat mask for species so that cells that are
-  // converted and no longer suitable are discounted.
   for (int sp = 0; sp < n_s; ++sp) {
 
-    // Per-species suitability flags ----
-    const SpeciesDispData& S = species_info[sp];
-
-    // Check whether the species can go anywhere
-    if (!S.active) {
-      // No seeds / empty ROI -> no shortfall contribution
-      g[sp] = 0.0;
+    if (!species_plan.active[sp]) {
+      g[static_cast<std::size_t>(sp)] = 0.0;
       continue;
     }
 
-    // X mask by species ----
-    std::vector<double> sp_sd_x_mask(static_cast<std::size_t>(cells), 1u);
-    for (int h = 0; h < n_h; ++h) {
-      if (!S.suitable_h_flag[h]) {
-        // Cells in habitat h that are "on" in X become unsuitable
-        const std::size_t base_h = static_cast<std::size_t>(h) * static_cast<std::size_t>(cells);
-        for (std::size_t k = 0; k < static_cast<std::size_t>(cells); ++k) {
-          if (X[base_h + k] > 0.0) {
-            sp_sd_x_mask[k] = 0u;
-          }
-        }
-      }
-    }
+    // This needs to be target in n cells based on original distribution
 
-    // m_i: initial occupied tiles for species i (from SD)
-    int m_i = 0;
-    for (std::size_t idx : S.seed_idxs) {
-      if (sp_sd_x_mask[idx] == 1u) {
-        ++m_i;
-      }
-    }
+    const int m_i = compute_m_i_from_plan(sp, species_plan, X);
 
-    const double target = O[static_cast<std::size_t>(sp)] * static_cast<double>(m_i);
-    const double Gi = G[static_cast<std::size_t>(sp)];
-    // Absolute targets
-    //g[static_cast<std::size_t>(sp)] = std::max(0.0, target - Gi);
-    // Proportional targets
-    g[static_cast<std::size_t>(sp)] = (target > 0.0) ? std::max(0.0, (target - Gi) / target): 0.0;
+    const double target = species_plan.O_n[static_cast<std::size_t>(sp)];
+    const double m0   = static_cast<double>(species_plan.seed_len[static_cast<std::size_t>(sp)]);
+    const double kept = static_cast<double>(m_i);
+    const double lost = m0 - kept;
 
-    // std::cout << "sp=" << sp
-    //           << " m_i=" << m_i
-    //           << " target=" << target
-    //           << " G=" << Gi
-    //           << " shortfall=" << std::max(0.0, target - Gi)
-    //           << std::endl;
+    // net gain = new reachable X - lost original seeds
+    const double Gi = G[static_cast<std::size_t>(sp)] - lost;
+
+    // Proportional target shortfall
+    g[static_cast<std::size_t>(sp)] =
+      (target > 0.0) ? std::max(0.0, (target - Gi) / target) : 0.0;
 
   }
 
@@ -243,4 +249,3 @@ HResult compute_H(const std::vector<double>& X,
 
   return { H_val, Fx_val, gx_val, f1, f2, g };
 }
-
